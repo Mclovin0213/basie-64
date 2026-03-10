@@ -1,0 +1,22 @@
+[package]
+name = "basie-64"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+eframe = "0.31.0"
+base64 = "0.22.1"
+image = "0.25"
+regex = "1"
+rfd = "0.14"
+infer = "0.15"
+egui_extras = { version = "0.31.0", features = ["image"] }
+
+[package.metadata.bundle]
+name = "Basie-64"
+identifier = "com.basie64.app"
+icon = ["icon.icns"]
+version = "0.1.0"
+copyright = "Copyright © 2026. All rights reserved."
+category = "Developer Tool"
+short_description = "A smooth Base64 encoder and decoder."
