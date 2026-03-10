@@ -1,0 +1,75 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # Push events to matching v*, i.e. v1.0, v20.15.10
+
+jobs:
+  build:
+    name: Build Release Binaries
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies (Ubuntu only)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev libasound2-dev
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Rename binaries (macOS/Linux)
+        if: runner.os != 'Windows'
+        run: mv target/release/basie-64 target/release/basie-64-${{ runner.os }}
+
+      - name: Rename binaries (Windows)
+        if: runner.os == 'Windows'
+        run: mv target/release/basie-64.exe target/release/basie-64-Windows.exe
+
+      - name: Upload Artifacts (macOS/Linux)
+        if: runner.os != 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: basie-64-${{ runner.os }}
+          path: target/release/basie-64-${{ runner.os }}
+
+      - name: Upload Artifacts (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: basie-64-Windows
+          path: target/release/basie-64-Windows.exe
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+        
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/basie-64-macOS/basie-64-macOS
+            artifacts/basie-64-Linux/basie-64-Linux
+            artifacts/basie-64-Windows/basie-64-Windows.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

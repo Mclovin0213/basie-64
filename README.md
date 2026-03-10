@@ -25,16 +25,27 @@ Basie-64 is an elegant, fast, and feature-rich Base64 encoder/decoder designed f
 *   **🖼️ Live Image Previews**: If the decoded Base64 contains an image, Basie-64 renders it live right inside the UI!
 *   **🎨 Native & Beautiful**: A dark-themed, perfectly spaced modern UI that feels native on any OS.
 
-## 🚀 Installation & Usage
+## 🚀 Downloads & Installation
 
-You will need [Rust](https://www.rust-lang.org/tools/install) installed on your system to build Basie-64 from source.
+### Pre-compiled Binaries (Recommended)
+You can directly download the latest pre-compiled binaries for your operating system from our [GitHub Releases](https://github.com/yourusername/basie-64/releases) page.
+
+Currently built for:
+- 🍎 **macOS** (Intel & Apple Silicon)
+- 🪟 **Windows** (`.exe`)
+- 🐧 **Linux**
+
+*Note: For macOS and Linux, after downloading, you may need to give the binary execution permissions (e.g., `chmod +x basie-64-macOS`).*
+
+### Building From Source
+If you prefer, you can also build Basie-64 directly from source. You will need [Rust](https://www.rust-lang.org/tools/install) installed on your system.
 
 ```sh
 # 1. Clone the repository
 git clone https://github.com/yourusername/basie-64.git
 cd basie-64
 
-# 2. Run the application
+# 2. Build and run the application
 cargo run --release
 ```
 
