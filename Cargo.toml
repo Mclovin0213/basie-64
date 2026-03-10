@@ -1,6 +1,6 @@
 [package]
 name = "basie-64"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [dependencies]
@@ -11,6 +11,7 @@ regex = "1"
 rfd = "0.14"
 infer = "0.15"
 egui_extras = { version = "0.31.0", features = ["image"] }
+serde_json = "1.0.149"
 
 [package.metadata.bundle]
 name = "Basie-64"

@@ -565,6 +565,7 @@ dependencies = [
  "infer",
  "regex",
  "rfd",
+ "serde_json",
 ]
 
 [[package]]

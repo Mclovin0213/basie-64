@@ -66,6 +66,7 @@ struct Basie64App {
     base64_regex: Regex,
     mixed_matches: Vec<String>,
     image_preview: Option<egui::TextureHandle>,
+    encoded_data_uri: Option<String>,
 }
 
 impl Default for Basie64App {
@@ -81,18 +82,67 @@ impl Default for Basie64App {
             base64_regex: Regex::new(r"(?x) (?:[A-Za-z0-9+/]{4}){4,} (?:[A-Za-z0-9+/]{2}== | [A-Za-z0-9+/]{3}=)?").unwrap(),
             mixed_matches: Vec::new(),
             image_preview: None,
+            encoded_data_uri: None,
         }
     }
 }
 
 impl Basie64App {
     fn decode_input_str(&mut self, ctx: &egui::Context, b64: &str) {
-        match general_purpose::STANDARD.decode(b64.trim()) {
+        let clean_b64 = b64.replace(|c: char| c.is_whitespace(), "");
+        let b64_content = if let Some(idx) = clean_b64.find("base64,") {
+            &clean_b64[idx + 7..]
+        } else {
+            clean_b64.as_str()
+        };
+
+        // Attempt JWT first
+        let parts: Vec<&str> = b64_content.split('.').collect();
+        if parts.len() == 3 {
+            if let (Ok(header), Ok(payload)) = (
+                general_purpose::URL_SAFE_NO_PAD.decode(parts[0]).or_else(|_| general_purpose::URL_SAFE.decode(parts[0])),
+                general_purpose::URL_SAFE_NO_PAD.decode(parts[1]).or_else(|_| general_purpose::URL_SAFE.decode(parts[1]))
+            ) {
+                if let (Ok(header_str), Ok(payload_str)) = (String::from_utf8(header), String::from_utf8(payload)) {
+                    let mut formatted = String::from("JWT Detected:\n\nHeader:\n");
+                    if let Ok(h_json) = serde_json::from_str::<serde_json::Value>(&header_str) {
+                        formatted.push_str(&serde_json::to_string_pretty(&h_json).unwrap_or(header_str));
+                    } else {
+                        formatted.push_str(&header_str);
+                    }
+                    formatted.push_str("\n\nPayload:\n");
+                    if let Ok(p_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
+                        formatted.push_str(&serde_json::to_string_pretty(&p_json).unwrap_or(payload_str));
+                    } else {
+                        formatted.push_str(&payload_str);
+                    }
+                    formatted.push_str(&format!("\n\nSignature:\n{}\n", parts[2]));
+                    
+                    self.output = formatted;
+                    self.error = None;
+                    self.image_preview = None;
+                    self.encoded_data_uri = None;
+                    return;
+                }
+            }
+        }
+
+        // Try Standard or URL-Safe Date decoding
+        let decode_result = general_purpose::STANDARD.decode(b64_content)
+            .or_else(|_| general_purpose::URL_SAFE.decode(b64_content))
+            .or_else(|_| general_purpose::URL_SAFE_NO_PAD.decode(b64_content));
+
+        match decode_result {
             Ok(bytes) => {
                 // Try text
                 match String::from_utf8(bytes.clone()) {
                     Ok(s) => {
-                        self.output = s;
+                        // Try auto-formatting as JSON
+                        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&s) {
+                            self.output = serde_json::to_string_pretty(&json).unwrap_or(s);
+                        } else {
+                            self.output = s;
+                        }
                         self.error = None;
                     }
                     Err(_) => {
@@ -118,10 +168,13 @@ impl Basie64App {
                 } else {
                     self.image_preview = None;
                 }
+                
+                self.encoded_data_uri = None;
             }
             Err(e) => {
                 self.error = Some(format!("Invalid Base64: {}", e));
                 self.image_preview = None;
+                self.encoded_data_uri = None;
             }
         }
     }
@@ -129,6 +182,28 @@ impl Basie64App {
 
 impl eframe::App for Basie64App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Handle keyboard shortcuts explicitly
+        ctx.input(|i| {
+            if i.modifiers.command && i.key_pressed(egui::Key::Enter) {
+                let b64 = self.input.clone();
+                self.decode_input_str(ctx, &b64);
+            }
+            if i.modifiers.command && i.modifiers.shift && i.key_pressed(egui::Key::C) {
+                if !self.output.is_empty() {
+                    ctx.copy_text(self.output.clone());
+                }
+            }
+            if i.key_pressed(egui::Key::Escape) {
+                self.input.clear();
+                self.output.clear();
+                self.error = None;
+                self.show_banner = false;
+                self.mixed_matches.clear();
+                self.image_preview = None;
+                self.encoded_data_uri = None;
+            }
+        });
+
         // Handle drag and drop files
         ctx.input(|i| {
             if let Some(file) = i.raw.dropped_files.first() {
@@ -136,6 +211,8 @@ impl eframe::App for Basie64App {
                     if let Ok(bytes) = fs::read(path) {
                         self.input = format!("[File: {}]\n(Size: {} bytes)\n", path.display(), bytes.len());
                         self.output = general_purpose::STANDARD.encode(&bytes);
+                        let mime_type = infer::get(&bytes).map(|t| t.mime_type()).unwrap_or("application/octet-stream");
+                        self.encoded_data_uri = Some(format!("data:{};base64,{}", mime_type, self.output));
                         self.error = None;
                         self.show_banner = false;
                         self.mixed_matches.clear();
@@ -234,12 +311,17 @@ impl eframe::App for Basie64App {
                     ui.vertical(|ui| {
                         ui.heading("Input");
                         ui.add_space(4.0);
-                        ui.add(
-                            egui::TextEdit::multiline(&mut self.input)
-                                .hint_text("Enter text, plain Base64, or mixed logs...")
-                                .desired_width(f32::INFINITY)
-                                .desired_rows(6),
-                        );
+                        egui::ScrollArea::vertical()
+                            .id_salt("input_scroll")
+                            .max_height(140.0)
+                            .show(ui, |ui| {
+                                ui.add(
+                                    egui::TextEdit::multiline(&mut self.input)
+                                        .hint_text("Enter text, plain Base64, or mixed logs...")
+                                        .desired_width(f32::INFINITY)
+                                        .desired_rows(6),
+                                );
+                            });
                     });
                 });
 
@@ -249,6 +331,7 @@ impl eframe::App for Basie64App {
                     if ui.button("Encode → Base64").clicked() {
                         self.output = general_purpose::STANDARD.encode(&self.input);
                         self.error = None;
+                        self.encoded_data_uri = Some(format!("data:text/plain;base64,{}", self.output));
                     }
 
                     if ui.button("Decode → Text / Image").clicked() {
@@ -258,8 +341,18 @@ impl eframe::App for Basie64App {
 
                     if ui.button("Save as File...").clicked() {
                         let b64 = self.input.trim();
-                        // For dropped files, extracting real base64 would be ideal, but for now we decode simple base64 inputs to files
-                        if let Ok(bytes) = general_purpose::STANDARD.decode(b64) {
+                        let clean_b64 = b64.replace(|c: char| c.is_whitespace(), "");
+                        let b64_content = if let Some(idx) = clean_b64.find("base64,") {
+                            &clean_b64[idx + 7..]
+                        } else {
+                            clean_b64.as_str()
+                        };
+                        
+                        let decode_result = general_purpose::STANDARD.decode(b64_content)
+                            .or_else(|_| general_purpose::URL_SAFE.decode(b64_content))
+                            .or_else(|_| general_purpose::URL_SAFE_NO_PAD.decode(b64_content));
+
+                        if let Ok(bytes) = decode_result {
                             let extension = infer::get(&bytes).map(|k| k.extension()).unwrap_or("bin");
                             if let Some(path) = rfd::FileDialog::new()
                                 .add_filter("Decoded", &[extension])
@@ -283,6 +376,7 @@ impl eframe::App for Basie64App {
                         self.show_banner = false;
                         self.mixed_matches.clear();
                         self.image_preview = None;
+                        self.encoded_data_uri = None;
                     }
                 });
 
@@ -296,15 +390,25 @@ impl eframe::App for Basie64App {
                                 if ui.button("📋 Copy").clicked() {
                                     ctx.copy_text(self.output.clone());
                                 }
+                                if let Some(data_uri) = &self.encoded_data_uri {
+                                    if ui.button("🌐 Copy as Data URI").clicked() {
+                                        ctx.copy_text(data_uri.clone());
+                                    }
+                                }
                             });
                         });
                         ui.add_space(4.0);
-                        ui.add(
-                            egui::TextEdit::multiline(&mut self.output)
-                                .interactive(false)
-                                .desired_width(f32::INFINITY)
-                                .desired_rows(6),
-                        );
+                        egui::ScrollArea::vertical()
+                            .id_salt("output_scroll")
+                            .max_height(140.0)
+                            .show(ui, |ui| {
+                                ui.add(
+                                    egui::TextEdit::multiline(&mut self.output)
+                                        .interactive(false)
+                                        .desired_width(f32::INFINITY)
+                                        .desired_rows(6),
+                                );
+                            });
                         
                         if let Some(texture) = &self.image_preview {
                             ui.add_space(8.0);
@@ -385,5 +489,48 @@ mod tests {
         assert!(app.output.contains("Decoded 3 binary bytes"));
         assert!(app.error.is_none());
         assert!(app.image_preview.is_none());
+    }
+
+    #[test]
+    fn test_decode_jwt() {
+        let mut app = Basie64App::default();
+        let ctx = egui::Context::default();
+        
+        let header = general_purpose::URL_SAFE_NO_PAD.encode(b"{\"alg\":\"HS256\",\"typ\":\"JWT\"}");
+        let payload = general_purpose::URL_SAFE_NO_PAD.encode(b"{\"sub\":\"1234567890\",\"name\":\"John Doe\",\"iat\":1516239022}");
+        let signature = "SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c";
+        
+        let jwt = format!("{}.{}.{}", header, payload, signature);
+        app.decode_input_str(&ctx, &jwt);
+        
+        assert!(app.output.contains("JWT Detected"));
+        assert!(app.output.contains("John Doe"));
+        assert!(app.error.is_none());
+    }
+
+    #[test]
+    fn test_decode_data_uri() {
+        let mut app = Basie64App::default();
+        let ctx = egui::Context::default();
+        
+        let valid_b64 = "SGVsbG8sIHdvcmxkIQ==";
+        let data_uri = format!("data:text/plain;base64,{}", valid_b64);
+        app.decode_input_str(&ctx, &data_uri);
+        
+        assert_eq!(app.output, "Hello, world!");
+        assert!(app.error.is_none());
+    }
+
+    #[test]
+    fn test_decode_url_safe() {
+        let mut app = Basie64App::default();
+        let ctx = egui::Context::default();
+        
+        // URL safe encoding of "????" uses valid characters slightly differently
+        let url_safe = general_purpose::URL_SAFE.encode(b"hello world!?");
+        
+        app.decode_input_str(&ctx, &url_safe);
+        assert_eq!(app.output, "hello world!?");
+        assert!(app.error.is_none());
     }
 }
