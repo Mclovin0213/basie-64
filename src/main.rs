@@ -21,6 +21,11 @@ fn setup_custom_visuals(ctx: &egui::Context) {
     // Customize accent colors to be slightly more aesthetic (like a soft purple/blue)
     visuals.selection.bg_fill = egui::Color32::from_rgb(108, 113, 196);
     
+    // Transparent background for the main panel
+    visuals.panel_fill = egui::Color32::from_rgba_unmultiplied(20, 20, 25, 230);
+    // Remove the default frame shadow which might look weird on a transparent window
+    visuals.window_shadow = egui::epaint::Shadow::NONE;
+    
     ctx.set_visuals(visuals);
 }
 
@@ -29,9 +34,11 @@ fn main() -> eframe::Result {
 
     let native_options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([650.0, 500.0])
+            .with_inner_size([400.0, 500.0])
             .with_title("Basie-64")
-            .with_icon(icon),
+            .with_icon(icon)
+            .with_decorations(false)
+            .with_transparent(true),
         ..Default::default()
     };
 
@@ -164,11 +171,23 @@ impl eframe::App for Basie64App {
             }
         }
 
-        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
-            egui::menu::bar(ui, |ui| {
+        egui::TopBottomPanel::top("top_panel")
+            .frame(egui::Frame::default().fill(egui::Color32::from_rgba_unmultiplied(35, 35, 40, 240)).inner_margin(8.0))
+            .show(ctx, |ui| {
+            let rect = ui.max_rect();
+            let resp = ui.interact(rect, ui.id().with("drag"), egui::Sense::drag());
+            if resp.dragged() {
+                ctx.send_viewport_cmd(egui::ViewportCommand::StartDrag);
+            }
+            ui.horizontal(|ui| {
                 ui.heading("🎷 Basie-64");
                 ui.separator();
-                ui.label("Encode / Decode Base64");
+                ui.label("Encode / Decode");
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.button("❌").clicked() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
+                });
             });
         });
 
