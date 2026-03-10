@@ -4,8 +4,8 @@
   <p><strong>A beautifully smooth, smart Base64 Encoder & Decoder built in Rust.</strong></p>
   
   <p>
-    <a href="https://github.com/yourusername/basie-64/releases">
-      <img src="https://img.shields.io/github/v/release/yourusername/basie-64" alt="Release" />
+    <a href="https://github.com/Mclovin0213/basie-64/releases">
+      <img src="https://img.shields.io/github/v/release/Mclovin0213/basie-64" alt="Release" />
     </a>
     <a href="https://opensource.org/licenses/MIT">
       <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License: MIT" />
@@ -28,7 +28,7 @@ Basie-64 is an elegant, fast, and feature-rich Base64 encoder/decoder designed f
 ## 🚀 Downloads & Installation
 
 ### Pre-compiled Binaries (Recommended)
-You can directly download the latest pre-compiled binaries for your operating system from our [GitHub Releases](https://github.com/yourusername/basie-64/releases) page.
+You can directly download the latest pre-compiled binaries for your operating system from our [GitHub Releases](https://github.com/Mclovin0213/basie-64/releases) page.
 
 Currently built for:
 - 🍎 **macOS** (Intel & Apple Silicon)
@@ -61,7 +61,7 @@ cargo run --release
 ## 🤝 Contributing
 
 Contributions, issues, and feature requests are welcome!
-Feel free to check out the [issues page](https://github.com/yourusername/basie-64/issues). 
+Feel free to check out the [issues page](https://github.com/Mclovin0213/basie-64/issues). 
 
 ## 📝 License
 
