@@ -1,6 +1,7 @@
 use eframe::egui;
 use image::GenericImageView;
 use serde::{Deserialize, Serialize};
+use std::{fs, path::PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum Theme {
@@ -46,8 +47,8 @@ enum ResolvedTheme {
 }
 
 pub fn load_icon() -> Option<egui::IconData> {
-    let icon_bytes = include_bytes!("../icon.png");
-    let image = image::load_from_memory(icon_bytes).ok()?;
+    let icon_bytes = load_icon_bytes()?;
+    let image = image::load_from_memory(&icon_bytes).ok()?;
     let (width, height) = image.dimensions();
     let rgba = image.into_rgba8().into_raw();
     Some(egui::IconData {
@@ -55,6 +56,19 @@ pub fn load_icon() -> Option<egui::IconData> {
         width,
         height,
     })
+}
+
+fn load_icon_bytes() -> Option<Vec<u8>> {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let candidates = [manifest_dir.join("icon.png"), manifest_dir.join("icons.png")];
+
+    for path in candidates {
+        if let Ok(bytes) = fs::read(path) {
+            return Some(bytes);
+        }
+    }
+
+    None
 }
 
 pub fn apply(ctx: &egui::Context, theme: Theme) {
