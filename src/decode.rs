@@ -1,4 +1,5 @@
 use crate::app::Basie64App;
+use crate::core::history::{HistoryEntry, HistoryOp};
 use base64::{engine::general_purpose, Engine as _};
 use eframe::egui;
 
@@ -93,6 +94,12 @@ impl Basie64App {
                     self.error_hint = None;
                     self.image_preview = None;
                     self.encoded_data_uri = None;
+                    self.history_store.append(HistoryEntry::new(
+                        HistoryOp::Decode,
+                        b64,
+                        &self.output,
+                        "jwt",
+                    ));
                     return;
                 }
             }
@@ -100,11 +107,20 @@ impl Basie64App {
 
         let decode_result = general_purpose::STANDARD
             .decode(b64_content)
-            .or_else(|_| general_purpose::URL_SAFE.decode(b64_content))
-            .or_else(|_| general_purpose::URL_SAFE_NO_PAD.decode(b64_content));
+            .map(|bytes| (bytes, "standard"))
+            .or_else(|_| {
+                general_purpose::URL_SAFE
+                    .decode(b64_content)
+                    .map(|bytes| (bytes, "url-safe"))
+            })
+            .or_else(|_| {
+                general_purpose::URL_SAFE_NO_PAD
+                    .decode(b64_content)
+                    .map(|bytes| (bytes, "url-safe-no-pad"))
+            });
 
         match decode_result {
-            Ok(bytes) => {
+            Ok((bytes, variant)) => {
                 match String::from_utf8(bytes.clone()) {
                     Ok(s) => {
                         if let Ok(json) = serde_json::from_str::<serde_json::Value>(&s) {
@@ -139,6 +155,14 @@ impl Basie64App {
                 }
 
                 self.encoded_data_uri = None;
+
+                // Log to history
+                self.history_store.append(HistoryEntry::new(
+                    HistoryOp::Decode,
+                    b64,
+                    &self.output,
+                    variant,
+                ));
             }
             Err(e) => {
                 self.error = Some(format!("Invalid Base64: {}", e));

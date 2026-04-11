@@ -1,3 +1,4 @@
+use crate::core::history::{history_path, HistoryOp, HistoryStore};
 use crate::decode::DecodeHint;
 use crate::settings::Settings;
 use crate::{detect, theme, ui};
@@ -28,10 +29,21 @@ pub struct Basie64App {
     pub(crate) copy_pulse_at: Option<f64>,
     pub(crate) banner_fade_start: Option<f64>,
     pub(crate) large_paste_confirmed: bool,
+
+    /// History of recent encode/decode operations.
+    pub(crate) history_store: HistoryStore,
+    /// Whether the history panel is currently visible.
+    pub(crate) show_history_panel: bool,
+    /// Search query for the history panel.
+    pub(crate) history_query: String,
+    /// Currently selected history entry id.
+    pub(crate) selected_history_entry: Option<String>,
 }
 
 impl Default for Basie64App {
     fn default() -> Self {
+        let settings = Settings::load();
+        let private_mode = settings.private_mode;
         Self {
             input: String::new(),
             last_input: String::new(),
@@ -47,12 +59,16 @@ impl Default for Basie64App {
             mixed_matches: Vec::new(),
             image_preview: None,
             encoded_data_uri: None,
-            settings: Settings::load(),
+            settings,
             applied_theme: None,
             now: 0.0,
             copy_pulse_at: None,
             banner_fade_start: None,
             large_paste_confirmed: false,
+            history_store: HistoryStore::load(history_path().unwrap_or_default(), private_mode),
+            show_history_panel: false,
+            history_query: String::new(),
+            selected_history_entry: None,
         }
     }
 }
@@ -72,6 +88,101 @@ impl Basie64App {
 
     pub fn mark_copy_pulse(&mut self) {
         self.copy_pulse_at = Some(self.now);
+    }
+
+    pub fn run_encode(&mut self) {
+        self.output = general_purpose::STANDARD.encode(&self.input);
+        self.error = None;
+        self.error_hint = None;
+        self.image_preview = None;
+        self.encoded_data_uri = Some(format!("data:text/plain;base64,{}", self.output));
+    }
+
+    pub fn set_private_mode(&mut self, enabled: bool) {
+        self.settings.private_mode = enabled;
+        self.settings.save();
+        self.history_store.set_private_mode(enabled);
+    }
+
+    pub fn visible_history_ids(&self) -> Vec<String> {
+        self.history_store
+            .search(&self.history_query)
+            .into_iter()
+            .rev()
+            .map(|entry| entry.id.clone())
+            .collect()
+    }
+
+    pub fn ensure_selected_history_entry(&mut self) {
+        let visible_ids = self.visible_history_ids();
+        if visible_ids.is_empty() {
+            self.selected_history_entry = None;
+            return;
+        }
+
+        let selected_is_visible = self
+            .selected_history_entry
+            .as_ref()
+            .is_some_and(|id| visible_ids.iter().any(|visible| visible == id));
+
+        if !selected_is_visible {
+            self.selected_history_entry = visible_ids.first().cloned();
+        }
+    }
+
+    pub fn step_history_selection(&mut self, delta: isize) {
+        let visible_ids = self.visible_history_ids();
+        if visible_ids.is_empty() {
+            self.selected_history_entry = None;
+            return;
+        }
+
+        let current_index = self
+            .selected_history_entry
+            .as_ref()
+            .and_then(|selected| visible_ids.iter().position(|id| id == selected))
+            .unwrap_or(0);
+        let next_index = (current_index as isize + delta).clamp(0, visible_ids.len() as isize - 1);
+        self.selected_history_entry = Some(visible_ids[next_index as usize].clone());
+    }
+
+    pub fn restore_selected_history_entry(&mut self, ctx: &egui::Context) {
+        let Some(selected_id) = self.selected_history_entry.clone() else {
+            return;
+        };
+        let Some(entry) = self.history_store.get_by_id(&selected_id).cloned() else {
+            self.ensure_selected_history_entry();
+            return;
+        };
+
+        self.input = entry.reload_input().to_string();
+        self.last_input = self.input.clone();
+        self.output.clear();
+        self.error = None;
+        self.error_hint = None;
+        self.show_banner = false;
+        self.mixed_matches.clear();
+        self.image_preview = None;
+        self.encoded_data_uri = None;
+        self.large_paste_confirmed = false;
+        self.show_history_panel = false;
+
+        match entry.op {
+            HistoryOp::Decode => {
+                let input = self.input.clone();
+                self.decode_input_str(ctx, &input);
+            }
+            HistoryOp::Encode => self.run_encode(),
+        }
+    }
+
+    pub fn delete_selected_history_entry(&mut self) {
+        let Some(selected_id) = self.selected_history_entry.clone() else {
+            return;
+        };
+        if self.history_store.remove_by_id(&selected_id) {
+            self.ensure_selected_history_entry();
+        }
     }
 
     pub fn request_decode(&mut self, ctx: &egui::Context) {
@@ -122,6 +233,23 @@ impl eframe::App for Basie64App {
             if i.key_pressed(egui::Key::Escape) {
                 self.clear();
             }
+            if i.modifiers.command && i.key_pressed(egui::Key::H) {
+                self.show_history_panel = !self.show_history_panel;
+            }
+            if self.show_history_panel {
+                if i.key_pressed(egui::Key::ArrowDown) {
+                    self.step_history_selection(1);
+                }
+                if i.key_pressed(egui::Key::ArrowUp) {
+                    self.step_history_selection(-1);
+                }
+                if i.key_pressed(egui::Key::Enter) && !i.modifiers.command {
+                    self.restore_selected_history_entry(ctx);
+                }
+                if i.key_pressed(egui::Key::Delete) {
+                    self.delete_selected_history_entry();
+                }
+            }
         });
 
         // Drag-drop files
@@ -168,6 +296,12 @@ impl eframe::App for Basie64App {
             });
         });
 
+        // History panel (bottom panel)
+        if self.show_history_panel {
+            self.ensure_selected_history_entry();
+            ui::history_panel::show(self, ctx);
+        }
+
         // Keep animations ticking
         if self.copy_pulse_at.is_some()
             || ui::banner::is_fade_active(self.banner_fade_start, self.now)
@@ -184,6 +318,14 @@ impl eframe::App for Basie64App {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn temp_history_store() -> (HistoryStore, tempfile::NamedTempFile) {
+        let file = tempfile::NamedTempFile::new().expect("temp file");
+        (
+            HistoryStore::load(file.path().to_path_buf(), false),
+            file,
+        )
+    }
 
     #[test]
     fn regex_compiles_via_default() {
@@ -303,5 +445,66 @@ mod tests {
             .is_some_and(|err| err.contains("click Decode again")));
         assert!(app.output.is_empty());
         assert!(app.large_paste_confirmed);
+    }
+
+    #[test]
+    fn history_search_does_not_mutate_input() {
+        let mut app = Basie64App::default();
+        let (store, _file) = temp_history_store();
+        app.history_store = store;
+        app.input = "SGVsbG8=".into();
+        app.history_query = "Hello".into();
+
+        let visible = app.visible_history_ids();
+
+        assert!(visible.is_empty());
+        assert_eq!(app.input, "SGVsbG8=");
+    }
+
+    #[test]
+    fn restore_decode_history_uses_full_input() {
+        let mut app = Basie64App::default();
+        let (store, _file) = temp_history_store();
+        app.history_store = store;
+        let ctx = egui::Context::default();
+        let plain_text = "a".repeat(120);
+        let input = general_purpose::STANDARD.encode(&plain_text);
+        app.decode_input_str(&ctx, &input);
+        let entry_id = app.history_store.entries()[0].id.clone();
+
+        app.input.clear();
+        app.output.clear();
+        app.selected_history_entry = Some(entry_id);
+        app.restore_selected_history_entry(&ctx);
+
+        assert_eq!(app.input, input);
+        assert_eq!(app.output, plain_text);
+    }
+
+    #[test]
+    fn restore_encode_history_recomputes_output() {
+        let mut app = Basie64App::default();
+        let (store, _file) = temp_history_store();
+        app.history_store = store;
+        let original_input = "encode me".repeat(20);
+        app.input = original_input.clone();
+        app.run_encode();
+        let expected_output = app.output.clone();
+        let entry = crate::core::history::HistoryEntry::new(
+            HistoryOp::Encode,
+            &app.input,
+            &app.output,
+            "standard",
+        );
+        let entry_id = entry.id.clone();
+        app.history_store.append(entry);
+
+        app.input.clear();
+        app.output.clear();
+        app.selected_history_entry = Some(entry_id);
+        app.restore_selected_history_entry(&egui::Context::default());
+
+        assert_eq!(app.input, original_input);
+        assert_eq!(app.output, expected_output);
     }
 }

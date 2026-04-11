@@ -1,4 +1,5 @@
 use crate::app::Basie64App;
+use crate::core::history::{HistoryEntry, HistoryOp};
 use base64::{engine::general_purpose, Engine as _};
 use eframe::egui;
 
@@ -9,10 +10,13 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
             .on_hover_text("Encode the input as standard Base64")
             .clicked()
         {
-            app.output = general_purpose::STANDARD.encode(&app.input);
-            app.error = None;
-            app.error_hint = None;
-            app.encoded_data_uri = Some(format!("data:text/plain;base64,{}", app.output));
+            app.run_encode();
+            app.history_store.append(HistoryEntry::new(
+                HistoryOp::Encode,
+                &app.input,
+                &app.output,
+                "standard",
+            ));
         }
 
         let decode_btn = ui

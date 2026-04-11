@@ -60,7 +60,10 @@ pub fn load_icon() -> Option<egui::IconData> {
 
 fn load_icon_bytes() -> Option<Vec<u8>> {
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let candidates = [manifest_dir.join("icon.png"), manifest_dir.join("icons.png")];
+    let candidates = [
+        manifest_dir.join("icon.png"),
+        manifest_dir.join("icons.png"),
+    ];
 
     for path in candidates {
         if let Ok(bytes) = fs::read(path) {

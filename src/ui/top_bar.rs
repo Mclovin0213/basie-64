@@ -30,6 +30,28 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                         app.settings.theme = app.settings.theme.next();
                         app.settings.save();
                     }
+                    ui.menu_button("⚙", |ui| {
+                        let private_toggle = ui.checkbox(
+                            &mut app.settings.private_mode,
+                            "Private mode",
+                        );
+                        if private_toggle.clicked() {
+                            app.set_private_mode(app.settings.private_mode);
+                        }
+                    })
+                    .response
+                    .on_hover_text("Settings");
+                    if ui
+                        .button(if app.show_history_panel {
+                            "Hide History"
+                        } else {
+                            "Show History"
+                        })
+                        .on_hover_text("Toggle history panel (⌘H)")
+                        .clicked()
+                    {
+                        app.show_history_panel = !app.show_history_panel;
+                    }
                 });
             });
         });

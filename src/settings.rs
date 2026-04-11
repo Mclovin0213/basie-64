@@ -11,6 +11,9 @@ pub struct Settings {
     pub shortcut_hint_dismissed: bool,
     #[serde(default)]
     pub recent_files: Vec<PathBuf>,
+    /// When true, no history entries are recorded.
+    #[serde(default)]
+    pub private_mode: bool,
 }
 
 impl Settings {
