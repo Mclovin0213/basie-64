@@ -2,6 +2,7 @@
 name = "basie-64"
 version = "0.2.0"
 edition = "2021"
+default-run = "basie-64"
 
 [lib]
 name = "basie_64"
