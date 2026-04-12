@@ -1,4 +1,5 @@
 pub mod banner;
+pub mod batch_panel;
 pub mod buttons;
 pub mod history_panel;
 pub mod input;

@@ -31,10 +31,8 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                         app.settings.save();
                     }
                     ui.menu_button("⚙", |ui| {
-                        let private_toggle = ui.checkbox(
-                            &mut app.settings.private_mode,
-                            "Private mode",
-                        );
+                        let private_toggle =
+                            ui.checkbox(&mut app.settings.private_mode, "Private mode");
                         if private_toggle.clicked() {
                             app.set_private_mode(app.settings.private_mode);
                         }

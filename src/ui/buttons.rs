@@ -41,6 +41,50 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
         {
             app.clear();
         }
+
+        ui.add_space(8.0);
+
+        let batch_enabled = !app.is_batch_running();
+
+        if ui
+            .add_enabled(batch_enabled, egui::Button::new("📁 Batch Encode Folder…"))
+            .on_hover_text("Select a folder to batch encode all files")
+            .clicked()
+        {
+            if let Some(dir) = rfd::FileDialog::new().pick_folder() {
+                app.start_batch_encode(dir, None);
+            }
+        }
+
+        if ui
+            .add_enabled(batch_enabled, egui::Button::new("📁 Batch Decode Folder…"))
+            .on_hover_text("Select a folder to batch decode .b64 files")
+            .clicked()
+        {
+            if let Some(dir) = rfd::FileDialog::new().pick_folder() {
+                app.start_batch_decode(dir, None);
+            }
+        }
+
+        if ui
+            .add_enabled(batch_enabled, egui::Button::new("🗂 Batch Encode Files…"))
+            .on_hover_text("Select multiple files to batch encode")
+            .clicked()
+        {
+            if let Some(files) = rfd::FileDialog::new().pick_files() {
+                app.start_batch_encode_files(files, None);
+            }
+        }
+
+        if ui
+            .add_enabled(batch_enabled, egui::Button::new("🗂 Batch Decode Files…"))
+            .on_hover_text("Select multiple .b64 files to batch decode")
+            .clicked()
+        {
+            if let Some(files) = rfd::FileDialog::new().pick_files() {
+                app.start_batch_decode_files(files, None);
+            }
+        }
     });
 }
 

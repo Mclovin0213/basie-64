@@ -20,15 +20,15 @@ src/
 ├── samples.rs     Hard-coded sample payloads (JWT, PNG data URI, JSON) for the Samples menu.
 ├── core/
 │   ├── mod.rs     Re-exports for pure-logic modules.
-│   └── history.rs HistoryEntry + HistoryStore (JSON persistence, FIFO eviction, search). Phase 2.
+│   └── history.rs HistoryEntry + HistoryStore (JSON persistence, FIFO eviction, stable IDs, exact delete, search, full-input reload). Phase 2.
 └── ui/
     ├── mod.rs       Module exports.
-    ├── top_bar.rs   Draggable titlebar, theme toggle, close button.
+    ├── top_bar.rs   Draggable titlebar, theme toggle, private mode settings toggle, history-panel toggle, close button.
     ├── input.rs     Input text area, empty-state hint, samples menu, shortcut-hint row.
     ├── buttons.rs   Action row: Encode / Decode / Save as File / Clear. Handles large-paste confirm.
     ├── output.rs    Output text area (monospace), Copy / Copy as Data URI, image preview, copy-pulse.
     ├── banner.rs    Smart-detection banner (with fade-in), mixed-matches list, error + hint row.
-    └── history_panel.rs  Collapsible bottom panel: searchable history, double-click reload, private mode.
+    └── history_panel.rs  Collapsible bottom panel: dedicated search, selection, Enter/double-click reload, per-entry delete, clear all.
 ```
 
 `Basie64App` fields are `pub(crate)` — UI modules take `&mut Basie64App` and read/write directly. No event bus, no `Rc<RefCell>`.
@@ -39,7 +39,7 @@ src/
 
 ```sh
 cargo run                         # launch the app
-cargo test                        # unit tests (14 at last count)
+cargo test                        # unit tests
 cargo fmt                         # format
 cargo clippy --all-targets -- -D warnings   # lint (must be clean)
 ```

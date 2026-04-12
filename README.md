@@ -23,6 +23,7 @@ Basie-64 is an elegant, fast, and feature-rich Base64 encoder/decoder designed f
 *   **📂 Drag & Drop File Support**: Drop any file directly into the app to instantly get its Base64 encoding.
 *   **💾 Decode to File**: Safely decode Base64 back into its original file format (images, binaries, pdfs, etc.) with automatic file-type inference and native save dialogs.
 *   **🖼️ Live Image Previews**: If the decoded Base64 contains an image, Basie-64 renders it live right inside the UI!
+*   **🕘 Local History Panel**: Browse recent encodes and decodes with search, keyboard navigation, reload, delete, clear-all, and a private mode toggle for sensitive work.
 *   **🎨 Native & Beautiful**: A dark-themed, perfectly spaced modern UI that feels native on any OS.
 
 ## 🚀 Downloads & Installation

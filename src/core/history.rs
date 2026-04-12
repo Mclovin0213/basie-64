@@ -52,7 +52,9 @@ pub struct HistoryEntry {
 
 impl HistoryEntry {
     pub fn new(op: HistoryOp, input: &str, output: &str, variant: &str) -> Self {
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default();
         let timestamp = now.as_secs();
         Self {
             id: format!("{}-{}", now.as_nanos(), next_counter()),
@@ -97,13 +99,11 @@ fn truncate(s: &str, max_len: usize) -> String {
         s.to_string()
     } else {
         let mut end = s.len();
-        let mut count = 0;
-        for (idx, _) in s.char_indices() {
+        for (count, (idx, _)) in s.char_indices().enumerate() {
             if count == max_len {
                 end = idx;
                 break;
             }
-            count += 1;
         }
         format!("{}…", &s[..end])
     }
@@ -203,7 +203,9 @@ fn next_counter() -> u64 {
 }
 
 fn next_history_id() -> String {
-    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
     format!("{}-{}", now.as_nanos(), next_counter())
 }
 

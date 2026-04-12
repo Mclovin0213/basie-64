@@ -63,7 +63,8 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                             continue;
                         };
 
-                        let selected = app.selected_history_entry.as_deref() == Some(entry.id.as_str());
+                        let selected =
+                            app.selected_history_entry.as_deref() == Some(entry.id.as_str());
                         let row_text = format!(
                             "{}  {}  {} → {}",
                             entry.op.icon(),

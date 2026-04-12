@@ -44,12 +44,12 @@ Goal: the app feels finished the moment you open it.
 Goal: things competing web tools *can't* easily do, that make this the obvious pick.
 
 - **History panel** ✅ — timestamped, searchable list of recent encodes/decodes (local only, clearable, with a "private mode" toggle for sensitive data). Implemented in `v0.3.1`:
-  - `src/core/history.rs` — `HistoryEntry` + `HistoryStore` (JSON persistence, FIFO eviction at 200 entries, search filtering)
-  - `src/ui/history_panel.rs` — Collapsible bottom panel with search bar, entry list, double-click to reload, per-entry delete, clear all
+  - `src/core/history.rs` — `HistoryEntry` + `HistoryStore` (JSON persistence, FIFO eviction at 200 entries, search filtering, stable entry IDs, full-input reload support)
+  - `src/ui/history_panel.rs` — Collapsible bottom panel with dedicated search state, row selection, Enter/double-click reload, per-entry delete, clear all
   - Keyboard shortcut: Cmd/Ctrl+H to toggle
-  - Private mode toggle in panel header (also persisted in `settings.private_mode`)
+  - Private mode toggle in top-bar settings (persisted in `settings.private_mode`)
   - First `core/` module — pure logic, zero `egui` imports (unblocks CLI companion)
-  - 10 unit tests for history store (append, eviction, search, private mode, remove, round-trip)
+  - Tests cover append, eviction, search, private mode, exact delete, full-input reload, and encode/decode round-trip restore
 - **Batch mode** — drop a folder, encode/decode every file, export as a manifest
 - **Multi-format detect & convert** — auto-detect hex, Base32, Base58, URL-encoded, percent-encoded, and offer conversion
 - **Diff view** — paste two Base64 strings, see decoded diff side-by-side
