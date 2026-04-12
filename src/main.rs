@@ -1,11 +1,13 @@
 mod app;
-mod core;
 mod decode;
 mod detect;
 mod samples;
 mod settings;
 mod theme;
 mod ui;
+
+// Re-export lib core module so binary modules can use `crate::core::*`.
+pub use basie_64::core;
 
 use app::Basie64App;
 use eframe::egui;

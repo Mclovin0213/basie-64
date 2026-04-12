@@ -5,7 +5,7 @@ use crate::core::batch::{
 use crate::core::convert::Format;
 use crate::core::diff::{diff_binary, diff_text, DiffResult};
 use crate::core::history::{history_path, HistoryOp, HistoryStore};
-use crate::decode::DecodeHint;
+use crate::core::decode::DecodeHint;
 use crate::settings::Settings;
 use crate::ui::command_palette::CommandAction;
 use crate::{detect, theme, ui};
@@ -171,7 +171,7 @@ impl Basie64App {
     }
 
     pub fn run_encode(&mut self) {
-        self.output = general_purpose::STANDARD.encode(&self.input);
+        self.output = crate::core::encode::encode_base64(&self.input);
         self.error = None;
         self.error_hint = None;
         self.image_preview = None;

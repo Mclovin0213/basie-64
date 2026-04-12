@@ -133,7 +133,7 @@ fn save_to_file(app: &mut Basie64App) {
         }
         Err(_) => {
             app.error = Some("Invalid Base64 for file decoding".into());
-            app.error_hint = crate::decode::infer_hint(b64);
+            app.error_hint = crate::core::decode::infer_hint(b64);
         }
     }
 }
