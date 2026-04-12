@@ -1,4 +1,6 @@
 use crate::app::Basie64App;
+use crate::core::convert::Format;
+use crate::core::history::{HistoryEntry, HistoryOp};
 use eframe::egui;
 
 const FADE_DURATION: f64 = 0.25;
@@ -34,6 +36,60 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
         {
             let b64 = app.input.clone();
             app.decode_input_str(ctx, &b64);
+        }
+    });
+    ui.add_space(10.0);
+}
+
+/// Show the "Detected X — Convert to Y?" hint banner for non-Base64 formats.
+/// Renders a format label, a target-format ComboBox, and a Convert button.
+pub fn show_convert_hint(app: &mut Basie64App, _ctx: &egui::Context, ui: &mut egui::Ui) {
+    if !app.show_convert_banner {
+        return;
+    }
+    let Some(detected) = app.detected_format else {
+        return;
+    };
+
+    // Green accent — visually distinct from the Base64 banner's yellow.
+    let accent = egui::Color32::from_rgb(100, 200, 120);
+
+    ui.horizontal(|ui| {
+        ui.label(egui::RichText::new("🔎 ").color(accent));
+        ui.label(
+            egui::RichText::new(format!("Detected {} — Convert to:", detected)).strong(),
+        );
+
+        egui::ComboBox::from_id_salt("convert_target")
+            .selected_text(format!("{}", app.convert_target))
+            .show_ui(ui, |ui| {
+                for &fmt in Format::all() {
+                    if fmt == detected {
+                        continue; // skip converting to the same format
+                    }
+                    ui.selectable_value(&mut app.convert_target, fmt, format!("{}", fmt));
+                }
+            });
+
+        if ui
+            .button("Convert")
+            .on_hover_text(format!(
+                "Convert {} to {}",
+                detected, app.convert_target
+            ))
+            .clicked()
+        {
+            let input_snapshot = app.input.trim().to_string();
+            let variant_label = format!("{} → {}", detected, app.convert_target);
+            app.run_convert();
+            if app.error.is_none() {
+                app.history_store.append(HistoryEntry::new(
+                    HistoryOp::Convert,
+                    &input_snapshot,
+                    &app.output,
+                    &variant_label,
+                ));
+            }
         }
     });
     ui.add_space(10.0);

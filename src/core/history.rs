@@ -18,6 +18,7 @@ static HISTORY_ID_COUNTER: AtomicU64 = AtomicU64::new(0);
 pub enum HistoryOp {
     Encode,
     Decode,
+    Convert,
 }
 
 impl HistoryOp {
@@ -25,6 +26,7 @@ impl HistoryOp {
         match self {
             HistoryOp::Encode => "⬆",
             HistoryOp::Decode => "⬇",
+            HistoryOp::Convert => "↔",
         }
     }
 }

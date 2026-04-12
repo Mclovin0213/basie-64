@@ -2,6 +2,7 @@ use crate::core::batch::{
     preview_batch, process_batch_with_progress, BatchConfig, BatchOp, BatchPreview, BatchProgress,
     BatchResult, BatchSource,
 };
+use crate::core::convert::Format;
 use crate::core::history::{history_path, HistoryOp, HistoryStore};
 use crate::decode::DecodeHint;
 use crate::settings::Settings;
@@ -28,6 +29,13 @@ pub struct Basie64App {
     pub(crate) mixed_matches: Vec<String>,
     pub(crate) image_preview: Option<egui::TextureHandle>,
     pub(crate) encoded_data_uri: Option<String>,
+
+    /// Non-Base64 format detected in the current input.
+    pub(crate) detected_format: Option<Format>,
+    /// Target format for the Convert action (persists across detections).
+    pub(crate) convert_target: Format,
+    /// Whether the "Detected X — Convert to Y?" hint banner is visible.
+    pub(crate) show_convert_banner: bool,
 
     pub(crate) settings: Settings,
     pub(crate) applied_theme: Option<crate::theme::Theme>,
@@ -85,6 +93,9 @@ impl Default for Basie64App {
             mixed_matches: Vec::new(),
             image_preview: None,
             encoded_data_uri: None,
+            detected_format: None,
+            convert_target: Format::Base64,
+            show_convert_banner: false,
             settings,
             applied_theme: None,
             now: 0.0,
@@ -115,6 +126,9 @@ impl Basie64App {
         self.image_preview = None;
         self.encoded_data_uri = None;
         self.large_paste_confirmed = false;
+        self.detected_format = None;
+        self.show_convert_banner = false;
+        // convert_target is intentionally kept — it is a user preference
     }
 
     pub fn mark_copy_pulse(&mut self) {
@@ -127,6 +141,43 @@ impl Basie64App {
         self.error_hint = None;
         self.image_preview = None;
         self.encoded_data_uri = Some(format!("data:text/plain;base64,{}", self.output));
+    }
+
+    /// Convert the current input from its detected format to `self.convert_target`.
+    /// Writes the result to `self.output`, or sets `self.error` on failure.
+    pub fn run_convert(&mut self) {
+        use crate::core::convert::convert;
+        let Some(from) = self.detected_format else {
+            return;
+        };
+        let to = self.convert_target;
+        let input = self.input.trim().to_string();
+        match convert(&input, from, to) {
+            Ok(result) => {
+                self.output = result;
+                self.error = None;
+                self.error_hint = None;
+                self.image_preview = None;
+                self.encoded_data_uri = None;
+            }
+            Err(e) => {
+                self.error = Some(format!("Conversion failed: {}", e));
+                self.error_hint = None;
+            }
+        }
+    }
+
+    pub fn replay_convert(&mut self, variant: &str) -> bool {
+        use crate::core::convert::parse_conversion_variant;
+
+        let Some((from, to)) = parse_conversion_variant(variant) else {
+            return false;
+        };
+
+        self.detected_format = Some(from);
+        self.convert_target = to;
+        self.run_convert();
+        true
     }
 
     pub fn set_private_mode(&mut self, enabled: bool) {
@@ -196,6 +247,8 @@ impl Basie64App {
         self.image_preview = None;
         self.encoded_data_uri = None;
         self.large_paste_confirmed = false;
+        self.detected_format = None;
+        self.show_convert_banner = false;
         self.show_history_panel = false;
 
         match entry.op {
@@ -204,6 +257,14 @@ impl Basie64App {
                 self.decode_input_str(ctx, &input);
             }
             HistoryOp::Encode => self.run_encode(),
+            HistoryOp::Convert => {
+                if !self.replay_convert(&entry.variant) {
+                    self.error = Some(format!(
+                        "Unable to restore conversion history entry: {}",
+                        entry.variant
+                    ));
+                }
+            }
         }
     }
 
@@ -488,6 +549,7 @@ impl eframe::App for Basie64App {
             egui::ScrollArea::vertical().show(ui, |ui| {
                 ui.add_space(10.0);
                 ui::banner::show(self, ctx, ui);
+                ui::banner::show_convert_hint(self, ctx, ui);
                 ui::banner::show_mixed_matches(self, ctx, ui);
                 ui::input::show(self, ui);
                 ui.add_space(12.0);
@@ -712,6 +774,34 @@ mod tests {
         app.restore_selected_history_entry(&egui::Context::default());
 
         assert_eq!(app.input, original_input);
+        assert_eq!(app.output, expected_output);
+    }
+
+    #[test]
+    fn restore_convert_history_recomputes_output() {
+        let mut app = Basie64App::default();
+        let (store, _file) = temp_history_store();
+        app.history_store = store;
+        app.input = "48656c6c6f".into();
+        app.detected_format = Some(Format::Hex);
+        app.convert_target = Format::Base64;
+        app.run_convert();
+        let expected_output = app.output.clone();
+        let entry = crate::core::history::HistoryEntry::new(
+            HistoryOp::Convert,
+            &app.input,
+            &app.output,
+            "Hex → Base64",
+        );
+        let entry_id = entry.id.clone();
+        app.history_store.append(entry);
+
+        app.input.clear();
+        app.output.clear();
+        app.selected_history_entry = Some(entry_id);
+        app.restore_selected_history_entry(&egui::Context::default());
+
+        assert_eq!(app.input, "48656c6c6f");
         assert_eq!(app.output, expected_output);
     }
 
