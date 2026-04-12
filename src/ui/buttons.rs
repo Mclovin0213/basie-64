@@ -1,6 +1,5 @@
 use crate::app::Basie64App;
 use crate::core::history::{HistoryEntry, HistoryOp};
-use base64::{engine::general_purpose, Engine as _};
 use eframe::egui;
 
 pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
@@ -39,7 +38,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
             .on_hover_text("Decode input and save to disk")
             .clicked()
         {
-            save_to_file(app);
+            app.save_to_file();
         }
 
         if ui
@@ -94,46 +93,4 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
             }
         }
     });
-}
-
-fn save_to_file(app: &mut Basie64App) {
-    let b64 = app.input.trim();
-    let clean_b64 = b64.replace(|c: char| c.is_whitespace(), "");
-    let b64_content = if let Some(idx) = clean_b64.find("base64,") {
-        &clean_b64[idx + 7..]
-    } else {
-        clean_b64.as_str()
-    };
-
-    let decode_result = general_purpose::STANDARD
-        .decode(b64_content)
-        .or_else(|_| general_purpose::URL_SAFE.decode(b64_content))
-        .or_else(|_| general_purpose::URL_SAFE_NO_PAD.decode(b64_content));
-
-    match decode_result {
-        Ok(bytes) => {
-            let extension = infer::get(&bytes).map(|k| k.extension()).unwrap_or("bin");
-            if let Some(path) = rfd::FileDialog::new()
-                .add_filter("Decoded", &[extension])
-                .save_file()
-            {
-                match std::fs::write(&path, &bytes) {
-                    Ok(()) => {
-                        app.output = format!("Saved successfully to {}", path.display());
-                        app.error = None;
-                        app.error_hint = None;
-                        app.settings.push_recent_file(path);
-                        app.settings.save();
-                    }
-                    Err(e) => {
-                        app.error = Some(format!("Failed to save file: {}", e));
-                    }
-                }
-            }
-        }
-        Err(_) => {
-            app.error = Some("Invalid Base64 for file decoding".into());
-            app.error_hint = crate::core::decode::infer_hint(b64);
-        }
-    }
 }

@@ -4,7 +4,10 @@ use regex::Regex;
 use std::io::{self, Read};
 
 #[derive(Parser)]
-#[command(name = "basie", about = "Base64 toolkit — encode, decode, convert, and more")]
+#[command(
+    name = "basie",
+    about = "Base64 toolkit — encode, decode, convert, and more"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

@@ -135,9 +135,8 @@ pub fn detect(input: &str, base64_regex: &Regex) -> DetectionResult {
     }
 
     // Base64 detection
-    let is_plain_b64 = base64_regex.is_match(trimmed)
-        && trimmed.len().is_multiple_of(4)
-        && !trimmed.contains(' ');
+    let is_plain_b64 =
+        base64_regex.is_match(trimmed) && trimmed.len().is_multiple_of(4) && !trimmed.contains(' ');
 
     if detected_non_b64.is_none()
         && is_plain_b64

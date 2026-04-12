@@ -1,4 +1,5 @@
 pub mod batch;
+pub mod command_registry;
 pub mod convert;
 pub mod decode;
 pub mod detect;

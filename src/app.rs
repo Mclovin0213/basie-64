@@ -3,11 +3,10 @@ use crate::core::batch::{
     BatchResult, BatchSource,
 };
 use crate::core::convert::Format;
+use crate::core::decode::DecodeHint;
 use crate::core::diff::{diff_binary, diff_text, DiffResult};
 use crate::core::history::{history_path, HistoryOp, HistoryStore};
-use crate::core::decode::DecodeHint;
 use crate::settings::Settings;
-use crate::ui::command_palette::CommandAction;
 use crate::{detect, theme, ui};
 use base64::{engine::general_purpose, Engine as _};
 use eframe::egui;
@@ -69,6 +68,8 @@ pub struct Basie64App {
     /// Command palette state.
     pub(crate) show_command_palette: bool,
     pub(crate) command_palette_query: String,
+    pub(crate) command_palette_selected: usize,
+    pub(crate) command_palette_just_opened: bool,
 
     /// Batch operation state.
     pub(crate) batch_result: Option<BatchResult>,
@@ -132,6 +133,8 @@ impl Default for Basie64App {
             diff_error: None,
             show_command_palette: false,
             command_palette_query: String::new(),
+            command_palette_selected: 0,
+            command_palette_just_opened: false,
             batch_result: None,
             show_batch_panel: false,
             batch_pending_confirmation: None,
@@ -164,6 +167,49 @@ impl Basie64App {
         self.diff_error = None;
         self.show_command_palette = false;
         self.command_palette_query.clear();
+    }
+
+    /// Decode input and prompt the user to save as a file.
+    pub fn save_to_file(&mut self) {
+        let b64 = self.input.trim();
+        let clean_b64 = b64.replace(|c: char| c.is_whitespace(), "");
+        let b64_content = if let Some(idx) = clean_b64.find("base64,") {
+            &clean_b64[idx + 7..]
+        } else {
+            clean_b64.as_str()
+        };
+
+        let decode_result = general_purpose::STANDARD
+            .decode(b64_content)
+            .or_else(|_| general_purpose::URL_SAFE.decode(b64_content))
+            .or_else(|_| general_purpose::URL_SAFE_NO_PAD.decode(b64_content));
+
+        match decode_result {
+            Ok(bytes) => {
+                let extension = infer::get(&bytes).map(|k| k.extension()).unwrap_or("bin");
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("Decoded", &[extension])
+                    .save_file()
+                {
+                    match std::fs::write(&path, &bytes) {
+                        Ok(()) => {
+                            self.output = format!("Saved successfully to {}", path.display());
+                            self.error = None;
+                            self.error_hint = None;
+                            self.settings.push_recent_file(path);
+                            self.settings.save();
+                        }
+                        Err(e) => {
+                            self.error = Some(format!("Failed to save file: {}", e));
+                        }
+                    }
+                }
+            }
+            Err(_) => {
+                self.error = Some("Invalid Base64 for file decoding".into());
+                self.error_hint = crate::core::decode::infer_hint(b64);
+            }
+        }
     }
 
     pub fn mark_copy_pulse(&mut self) {
@@ -281,22 +327,12 @@ impl Basie64App {
 
     pub fn toggle_command_palette(&mut self) {
         self.show_command_palette = !self.show_command_palette;
-        if !self.show_command_palette {
+        if self.show_command_palette {
+            self.command_palette_just_opened = true;
+            self.command_palette_selected = 0;
+        } else {
             self.command_palette_query.clear();
         }
-    }
-
-    pub fn apply_command_palette_action(&mut self, action: CommandAction) {
-        match action {
-            CommandAction::OpenDiffView => self.open_diff_view_from_input(),
-            CommandAction::ToggleHistory => {
-                self.show_history_panel = !self.show_history_panel;
-            }
-            CommandAction::ClearAll => self.clear(),
-        }
-
-        self.show_command_palette = false;
-        self.command_palette_query.clear();
     }
 
     pub fn set_private_mode(&mut self, enabled: bool) {
@@ -870,23 +906,6 @@ mod tests {
         assert!(app.diff_input_b.is_empty());
         assert!(app.diff_result.is_none());
         assert!(app.diff_error.is_none());
-    }
-
-    #[test]
-    fn apply_command_palette_open_diff_uses_current_input() {
-        let mut app = Basie64App {
-            input: "SGVsbG8=".into(),
-            show_command_palette: true,
-            command_palette_query: "diff".into(),
-            ..Default::default()
-        };
-
-        app.apply_command_palette_action(CommandAction::OpenDiffView);
-
-        assert!(app.show_diff_view);
-        assert!(!app.show_command_palette);
-        assert!(app.command_palette_query.is_empty());
-        assert_eq!(app.diff_input_a, "SGVsbG8=");
     }
 
     #[test]

@@ -49,14 +49,9 @@ pub fn infer_hint(raw: &str) -> Option<DecodeHint> {
 /// Structured decode output — no egui, no app state.
 #[derive(Debug, Clone)]
 pub enum DecodeOutput {
-    Jwt {
-        formatted: String,
-    },
+    Jwt { formatted: String },
     Text(String),
-    Binary {
-        bytes: Vec<u8>,
-        summary: String,
-    },
+    Binary { bytes: Vec<u8>, summary: String },
 }
 
 #[derive(Debug, Clone)]
