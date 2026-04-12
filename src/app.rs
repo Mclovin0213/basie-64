@@ -3,9 +3,11 @@ use crate::core::batch::{
     BatchResult, BatchSource,
 };
 use crate::core::convert::Format;
+use crate::core::diff::{diff_binary, diff_text, DiffResult};
 use crate::core::history::{history_path, HistoryOp, HistoryStore};
 use crate::decode::DecodeHint;
 use crate::settings::Settings;
+use crate::ui::command_palette::CommandAction;
 use crate::{detect, theme, ui};
 use base64::{engine::general_purpose, Engine as _};
 use eframe::egui;
@@ -53,6 +55,20 @@ pub struct Basie64App {
     pub(crate) history_query: String,
     /// Currently selected history entry id.
     pub(crate) selected_history_entry: Option<String>,
+
+    /// Diff view state.
+    pub(crate) show_diff_view: bool,
+    pub(crate) diff_input_a: String,
+    pub(crate) diff_input_b: String,
+    pub(crate) diff_last_a: String,
+    pub(crate) diff_last_b: String,
+    pub(crate) diff_result: Option<DiffResult>,
+    pub(crate) diff_is_binary: bool,
+    pub(crate) diff_error: Option<String>,
+
+    /// Command palette state.
+    pub(crate) show_command_palette: bool,
+    pub(crate) command_palette_query: String,
 
     /// Batch operation state.
     pub(crate) batch_result: Option<BatchResult>,
@@ -106,6 +122,16 @@ impl Default for Basie64App {
             show_history_panel: false,
             history_query: String::new(),
             selected_history_entry: None,
+            show_diff_view: false,
+            diff_input_a: String::new(),
+            diff_input_b: String::new(),
+            diff_last_a: String::new(),
+            diff_last_b: String::new(),
+            diff_result: None,
+            diff_is_binary: false,
+            diff_error: None,
+            show_command_palette: false,
+            command_palette_query: String::new(),
             batch_result: None,
             show_batch_panel: false,
             batch_pending_confirmation: None,
@@ -129,6 +155,15 @@ impl Basie64App {
         self.detected_format = None;
         self.show_convert_banner = false;
         // convert_target is intentionally kept — it is a user preference
+        self.show_diff_view = false;
+        self.diff_input_a.clear();
+        self.diff_input_b.clear();
+        self.diff_last_a.clear();
+        self.diff_last_b.clear();
+        self.diff_result = None;
+        self.diff_error = None;
+        self.show_command_palette = false;
+        self.command_palette_query.clear();
     }
 
     pub fn mark_copy_pulse(&mut self) {
@@ -178,6 +213,90 @@ impl Basie64App {
         self.convert_target = to;
         self.run_convert();
         true
+    }
+
+    /// Decode both diff inputs and compute the diff result.
+    pub fn run_diff(&mut self) {
+        use crate::core::convert::base64_to_bytes;
+        self.diff_last_a = self.diff_input_a.clone();
+        self.diff_last_b = self.diff_input_b.clone();
+
+        if self.diff_input_a.trim().is_empty() && self.diff_input_b.trim().is_empty() {
+            self.diff_result = None;
+            self.diff_error = None;
+            self.diff_is_binary = false;
+            return;
+        }
+
+        if self.diff_input_a.trim().is_empty() || self.diff_input_b.trim().is_empty() {
+            self.diff_result = None;
+            self.diff_error = None;
+            self.diff_is_binary = false;
+            return;
+        }
+
+        let bytes_a = base64_to_bytes(self.diff_input_a.trim());
+        let bytes_b = base64_to_bytes(self.diff_input_b.trim());
+
+        match (bytes_a, bytes_b) {
+            (Ok(a), Ok(b)) => {
+                let text_a = std::str::from_utf8(&a);
+                let text_b = std::str::from_utf8(&b);
+                if let (Ok(ta), Ok(tb)) = (text_a, text_b) {
+                    self.diff_is_binary = false;
+                    self.diff_result = Some(diff_text(ta, tb));
+                } else {
+                    self.diff_is_binary = true;
+                    self.diff_result = Some(diff_binary(&a, &b));
+                }
+                self.diff_error = None;
+            }
+            (Err(_), _) | (_, Err(_)) => {
+                self.diff_is_binary = false;
+                self.diff_result = None;
+                self.diff_error = Some("Enter valid Base64 in both comparison fields.".to_string());
+            }
+        }
+    }
+
+    pub fn open_diff_view_from_input(&mut self) {
+        self.show_diff_view = true;
+        self.diff_error = None;
+        self.diff_result = None;
+        self.diff_is_binary = false;
+
+        let trimmed = self.input.trim();
+        if crate::core::convert::base64_to_bytes(trimmed).is_ok() {
+            self.diff_input_a = trimmed.to_string();
+            self.diff_last_a = self.diff_input_a.clone();
+            self.diff_input_b.clear();
+            self.diff_last_b.clear();
+        } else {
+            self.diff_input_a.clear();
+            self.diff_input_b.clear();
+            self.diff_last_a.clear();
+            self.diff_last_b.clear();
+        }
+    }
+
+    pub fn toggle_command_palette(&mut self) {
+        self.show_command_palette = !self.show_command_palette;
+        if !self.show_command_palette {
+            self.command_palette_query.clear();
+        }
+    }
+
+    pub fn apply_command_palette_action(&mut self, action: CommandAction) {
+        match action {
+            CommandAction::OpenDiffView => self.open_diff_view_from_input(),
+            CommandAction::ToggleHistory => {
+                self.show_history_panel = !self.show_history_panel;
+            }
+            CommandAction::ClearAll => self.clear(),
+        }
+
+        self.show_command_palette = false;
+        self.command_palette_query.clear();
     }
 
     pub fn set_private_mode(&mut self, enabled: bool) {
@@ -500,6 +619,9 @@ impl eframe::App for Basie64App {
             if i.modifiers.command && i.key_pressed(egui::Key::Enter) {
                 self.request_decode(ctx);
             }
+            if i.modifiers.command && i.key_pressed(egui::Key::K) {
+                self.toggle_command_palette();
+            }
             if i.modifiers.command
                 && i.modifiers.shift
                 && i.key_pressed(egui::Key::C)
@@ -509,10 +631,22 @@ impl eframe::App for Basie64App {
                 self.copy_pulse_at = Some(self.now);
             }
             if i.key_pressed(egui::Key::Escape) {
-                self.clear();
+                if self.show_command_palette {
+                    self.show_command_palette = false;
+                    self.command_palette_query.clear();
+                } else {
+                    self.clear();
+                }
             }
             if i.modifiers.command && i.key_pressed(egui::Key::H) {
                 self.show_history_panel = !self.show_history_panel;
+            }
+            if i.modifiers.command && i.key_pressed(egui::Key::D) {
+                if self.show_diff_view {
+                    self.show_diff_view = false;
+                } else {
+                    self.open_diff_view_from_input();
+                }
             }
             if self.show_history_panel {
                 if i.key_pressed(egui::Key::ArrowDown) {
@@ -545,20 +679,25 @@ impl eframe::App for Basie64App {
         detect::run_detection(self);
 
         ui::top_bar::show(self, ctx);
-        egui::CentralPanel::default().show(ctx, |ui| {
-            egui::ScrollArea::vertical().show(ui, |ui| {
-                ui.add_space(10.0);
-                ui::banner::show(self, ctx, ui);
-                ui::banner::show_convert_hint(self, ctx, ui);
-                ui::banner::show_mixed_matches(self, ctx, ui);
-                ui::input::show(self, ui);
-                ui.add_space(12.0);
-                ui::buttons::show(self, ctx, ui);
-                ui.add_space(12.0);
-                ui::output::show(self, ctx, ui);
-                ui::banner::show_error(self, ctx, ui);
+
+        if self.show_diff_view {
+            ui::diff_view::show(self, ctx);
+        } else {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    ui.add_space(10.0);
+                    ui::banner::show(self, ctx, ui);
+                    ui::banner::show_convert_hint(self, ctx, ui);
+                    ui::banner::show_mixed_matches(self, ctx, ui);
+                    ui::input::show(self, ui);
+                    ui.add_space(12.0);
+                    ui::buttons::show(self, ctx, ui);
+                    ui.add_space(12.0);
+                    ui::output::show(self, ctx, ui);
+                    ui::banner::show_error(self, ctx, ui);
+                });
             });
-        });
+        }
 
         // History panel (bottom panel)
         if self.show_history_panel {
@@ -569,6 +708,10 @@ impl eframe::App for Basie64App {
         // Batch panel (bottom panel)
         if self.show_batch_panel {
             ui::batch_panel::show(self, ctx);
+        }
+
+        if self.show_command_palette {
+            ui::command_palette::show(self, ctx);
         }
 
         // Keep animations ticking
@@ -694,6 +837,56 @@ mod tests {
         assert!(!app.output.is_empty());
         assert!(app.error.is_none());
         assert!(!app.large_paste_confirmed);
+    }
+
+    #[test]
+    fn run_diff_rejects_invalid_base64_inputs() {
+        let mut app = Basie64App {
+            diff_input_a: "SGVsbG8=".into(),
+            diff_input_b: "not base64".into(),
+            ..Default::default()
+        };
+
+        app.run_diff();
+
+        assert!(app.diff_result.is_none());
+        assert_eq!(
+            app.diff_error.as_deref(),
+            Some("Enter valid Base64 in both comparison fields.")
+        );
+    }
+
+    #[test]
+    fn open_diff_view_from_input_seeds_valid_base64_into_left_side() {
+        let mut app = Basie64App {
+            input: "SGVsbG8=".into(),
+            ..Default::default()
+        };
+
+        app.open_diff_view_from_input();
+
+        assert!(app.show_diff_view);
+        assert_eq!(app.diff_input_a, "SGVsbG8=");
+        assert!(app.diff_input_b.is_empty());
+        assert!(app.diff_result.is_none());
+        assert!(app.diff_error.is_none());
+    }
+
+    #[test]
+    fn apply_command_palette_open_diff_uses_current_input() {
+        let mut app = Basie64App {
+            input: "SGVsbG8=".into(),
+            show_command_palette: true,
+            command_palette_query: "diff".into(),
+            ..Default::default()
+        };
+
+        app.apply_command_palette_action(CommandAction::OpenDiffView);
+
+        assert!(app.show_diff_view);
+        assert!(!app.show_command_palette);
+        assert!(app.command_palette_query.is_empty());
+        assert_eq!(app.diff_input_a, "SGVsbG8=");
     }
 
     #[test]

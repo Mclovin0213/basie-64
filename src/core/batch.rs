@@ -92,7 +92,6 @@ pub enum BatchStatus {
     Error { error: String },
 }
 
-
 /// Result of processing a single file in a batch operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BatchFileResult {

@@ -20,6 +20,7 @@ walkdir = "2"
 data-encoding = "2"
 bs58 = "0.5"
 percent-encoding = "2"
+similar = "2"
 
 [package.metadata.bundle]
 name = "Basie-64"

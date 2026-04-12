@@ -56,9 +56,7 @@ pub fn show_convert_hint(app: &mut Basie64App, _ctx: &egui::Context, ui: &mut eg
 
     ui.horizontal(|ui| {
         ui.label(egui::RichText::new("🔎 ").color(accent));
-        ui.label(
-            egui::RichText::new(format!("Detected {} — Convert to:", detected)).strong(),
-        );
+        ui.label(egui::RichText::new(format!("Detected {} — Convert to:", detected)).strong());
 
         egui::ComboBox::from_id_salt("convert_target")
             .selected_text(format!("{}", app.convert_target))
@@ -73,10 +71,7 @@ pub fn show_convert_hint(app: &mut Basie64App, _ctx: &egui::Context, ui: &mut eg
 
         if ui
             .button("Convert")
-            .on_hover_text(format!(
-                "Convert {} to {}",
-                detected, app.convert_target
-            ))
+            .on_hover_text(format!("Convert {} to {}", detected, app.convert_target))
             .clicked()
         {
             let input_snapshot = app.input.trim().to_string();

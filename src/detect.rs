@@ -59,7 +59,7 @@ fn is_base58_candidate(input: &str) -> bool {
     let has_upper = input.chars().any(|c| c.is_ascii_uppercase());
     let has_lower = input.chars().any(|c| c.is_ascii_lowercase());
 
-    if !has_digit && !(has_upper && has_lower) {
+    if !(has_digit || has_upper && has_lower) {
         return false;
     }
 
@@ -82,6 +82,19 @@ pub fn run_detection(app: &mut Basie64App) {
     let trimmed = app.input.trim();
     if trimmed.is_empty() {
         return;
+    }
+
+    // Diff mode: delimiter takes priority over all other detection.
+    if let Some((a, b)) = crate::core::diff::parse_diff_input(trimmed) {
+        if crate::core::convert::base64_to_bytes(&a).is_ok()
+            && crate::core::convert::base64_to_bytes(&b).is_ok()
+        {
+            app.diff_input_a = a;
+            app.diff_input_b = b;
+            app.show_diff_view = true;
+            app.run_diff();
+            return;
+        }
     }
 
     let detected_non_b64 = if is_percent_encoded_input(trimmed) {
@@ -115,7 +128,9 @@ pub fn run_detection(app: &mut Basie64App) {
         && trimmed.len().is_multiple_of(4)
         && !trimmed.contains(' ');
 
-    if detected_non_b64.is_none() && is_plain_b64 && general_purpose::STANDARD.decode(trimmed).is_ok()
+    if detected_non_b64.is_none()
+        && is_plain_b64
+        && general_purpose::STANDARD.decode(trimmed).is_ok()
     {
         app.show_banner = true;
         app.banner_message = "Looks like valid Base64!".to_string();
@@ -211,7 +226,9 @@ mod tests {
         // 'S', 'G', etc. include chars outside [0-9a-f], so HEX_RE should not match
         let stripped: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
         // 'S' is not a hex char, so the regex should fail
-        assert!(!HEX_RE.is_match(&stripped) || !stripped.len().is_multiple_of(2) || stripped.len() < 8);
+        assert!(
+            !HEX_RE.is_match(&stripped) || !stripped.len().is_multiple_of(2) || stripped.len() < 8
+        );
     }
 
     #[test]
@@ -232,12 +249,46 @@ mod tests {
 
     #[test]
     fn mixed_percent_and_base64_still_finds_embedded_base64() {
-        let mut app = Basie64App::default();
-        app.input = "note=foo%20bar token=SGVsbG8sIHdvcmxkIQ==".into();
+        let mut app = Basie64App {
+            input: "note=foo%20bar token=SGVsbG8sIHdvcmxkIQ==".into(),
+            ..Default::default()
+        };
 
         run_detection(&mut app);
 
         assert_eq!(app.detected_format, None);
-        assert!(app.mixed_matches.iter().any(|m| m == "SGVsbG8sIHdvcmxkIQ=="));
+        assert!(app
+            .mixed_matches
+            .iter()
+            .any(|m| m == "SGVsbG8sIHdvcmxkIQ=="));
+    }
+
+    #[test]
+    fn valid_diff_delimiter_opens_diff_view() {
+        let mut app = Basie64App {
+            input: "U0dWc2JHOD0=\n---\nV29ybGQ=".into(),
+            ..Default::default()
+        };
+
+        run_detection(&mut app);
+
+        assert!(app.show_diff_view);
+        assert_eq!(app.diff_input_a, "U0dWc2JHOD0=");
+        assert_eq!(app.diff_input_b, "V29ybGQ=");
+        assert!(app.diff_error.is_none());
+    }
+
+    #[test]
+    fn invalid_diff_delimiter_does_not_hijack_main_ui() {
+        let mut app = Basie64App {
+            input: "title\n---\nbody".into(),
+            ..Default::default()
+        };
+
+        run_detection(&mut app);
+
+        assert!(!app.show_diff_view);
+        assert!(app.diff_input_a.is_empty());
+        assert!(app.diff_input_b.is_empty());
     }
 }

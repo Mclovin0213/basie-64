@@ -27,6 +27,14 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
         }
 
         if ui
+            .button("Add comparison")
+            .on_hover_text("Open diff mode and compare with a second Base64 string (⌘D)")
+            .clicked()
+        {
+            app.open_diff_view_from_input();
+        }
+
+        if ui
             .button("Save as File...")
             .on_hover_text("Decode input and save to disk")
             .clicked()
