@@ -31,6 +31,14 @@ pub struct Basie64App {
     pub(crate) image_preview: Option<egui::TextureHandle>,
     pub(crate) encoded_data_uri: Option<String>,
 
+    /// Structured JWT inspection data, populated when the current decode
+    /// result is a JWT. Cleared on every other decode/encode/clear path.
+    pub(crate) jwt_inspection: Option<crate::core::jwt::JwtInspection>,
+    /// Secret input for HMAC verification in the JWT inspector.
+    pub(crate) jwt_secret_input: String,
+    /// Latest HMAC verification result for the currently-displayed JWT.
+    pub(crate) jwt_verification: Option<crate::core::jwt::VerificationResult>,
+
     /// Non-Base64 format detected in the current input.
     pub(crate) detected_format: Option<Format>,
     /// Target format for the Convert action (persists across detections).
@@ -110,6 +118,9 @@ impl Default for Basie64App {
             mixed_matches: Vec::new(),
             image_preview: None,
             encoded_data_uri: None,
+            jwt_inspection: None,
+            jwt_secret_input: String::new(),
+            jwt_verification: None,
             detected_format: None,
             convert_target: Format::Base64,
             show_convert_banner: false,
@@ -154,6 +165,9 @@ impl Basie64App {
         self.mixed_matches.clear();
         self.image_preview = None;
         self.encoded_data_uri = None;
+        self.jwt_inspection = None;
+        self.jwt_secret_input.clear();
+        self.jwt_verification = None;
         self.large_paste_confirmed = false;
         self.detected_format = None;
         self.show_convert_banner = false;
@@ -222,6 +236,8 @@ impl Basie64App {
         self.error_hint = None;
         self.image_preview = None;
         self.encoded_data_uri = Some(format!("data:text/plain;base64,{}", self.output));
+        self.jwt_inspection = None;
+        self.jwt_verification = None;
     }
 
     /// Convert the current input from its detected format to `self.convert_target`.
@@ -240,6 +256,8 @@ impl Basie64App {
                 self.error_hint = None;
                 self.image_preview = None;
                 self.encoded_data_uri = None;
+                self.jwt_inspection = None;
+                self.jwt_verification = None;
             }
             Err(e) => {
                 self.error = Some(format!("Conversion failed: {}", e));
@@ -401,6 +419,9 @@ impl Basie64App {
         self.mixed_matches.clear();
         self.image_preview = None;
         self.encoded_data_uri = None;
+        self.jwt_inspection = None;
+        self.jwt_secret_input.clear();
+        self.jwt_verification = None;
         self.large_paste_confirmed = false;
         self.detected_format = None;
         self.show_convert_banner = false;
@@ -595,6 +616,8 @@ impl Basie64App {
                 .map(|t| t.mime_type())
                 .unwrap_or("application/octet-stream");
             self.encoded_data_uri = Some(format!("data:{};base64,{}", mime_type, self.output));
+            self.jwt_inspection = None;
+            self.jwt_verification = None;
             self.error = None;
             self.error_hint = None;
             self.show_banner = false;

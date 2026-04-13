@@ -1,9 +1,9 @@
-/// Command registry for the command palette.
-///
-/// Pure Rust module — no egui imports. Commands are defined as data.
-/// The UI layer (`ui/command_palette.rs`) executes commands by matching
-/// on `Command::id` strings; this module owns only the registry and
-/// fuzzy-search logic.
+//! Command registry for the command palette.
+//!
+//! Pure Rust module — no egui imports. Commands are defined as data.
+//! The UI layer (`ui/command_palette.rs`) executes commands by matching
+//! on `Command::id` strings; this module owns only the registry and
+//! fuzzy-search logic.
 
 /// A registered command in the palette.
 pub struct Command {

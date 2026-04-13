@@ -49,7 +49,7 @@ pub fn infer_hint(raw: &str) -> Option<DecodeHint> {
 /// Structured decode output — no egui, no app state.
 #[derive(Debug, Clone)]
 pub enum DecodeOutput {
-    Jwt { formatted: String },
+    Jwt(Box<crate::core::jwt::JwtInspection>),
     Text(String),
     Binary { bytes: Vec<u8>, summary: String },
 }
@@ -72,39 +72,9 @@ pub fn decode_base64(input: &str) -> Result<(DecodeOutput, &'static str), Decode
         clean.as_str()
     };
 
-    // Attempt JWT first
-    let parts: Vec<&str> = b64_content.split('.').collect();
-    if parts.len() == 3 {
-        if let (Ok(header), Ok(payload)) = (
-            general_purpose::URL_SAFE_NO_PAD
-                .decode(parts[0])
-                .or_else(|_| general_purpose::URL_SAFE.decode(parts[0])),
-            general_purpose::URL_SAFE_NO_PAD
-                .decode(parts[1])
-                .or_else(|_| general_purpose::URL_SAFE.decode(parts[1])),
-        ) {
-            if let (Ok(header_str), Ok(payload_str)) =
-                (String::from_utf8(header), String::from_utf8(payload))
-            {
-                let mut formatted = String::from("JWT Detected:\n\nHeader:\n");
-                if let Ok(h_json) = serde_json::from_str::<serde_json::Value>(&header_str) {
-                    formatted
-                        .push_str(&serde_json::to_string_pretty(&h_json).unwrap_or(header_str));
-                } else {
-                    formatted.push_str(&header_str);
-                }
-                formatted.push_str("\n\nPayload:\n");
-                if let Ok(p_json) = serde_json::from_str::<serde_json::Value>(&payload_str) {
-                    formatted
-                        .push_str(&serde_json::to_string_pretty(&p_json).unwrap_or(payload_str));
-                } else {
-                    formatted.push_str(&payload_str);
-                }
-                formatted.push_str(&format!("\n\nSignature:\n{}\n", parts[2]));
-
-                return Ok((DecodeOutput::Jwt { formatted }, "jwt"));
-            }
-        }
+    // Attempt JWT first — delegate to the structured inspector.
+    if let Ok(inspection) = crate::core::jwt::inspect(b64_content) {
+        return Ok((DecodeOutput::Jwt(Box::new(inspection)), "jwt"));
     }
 
     let decode_result = general_purpose::STANDARD
@@ -190,9 +160,13 @@ mod tests {
         let (output, variant) = decode_base64(&jwt).unwrap();
         assert_eq!(variant, "jwt");
         match output {
-            DecodeOutput::Jwt { formatted } => {
-                assert!(formatted.contains("JWT Detected"));
-                assert!(formatted.contains("John Doe"));
+            DecodeOutput::Jwt(inspection) => {
+                assert_eq!(inspection.header.alg, "HS256");
+                assert_eq!(
+                    inspection.payload.get("name").and_then(|v| v.as_str()),
+                    Some("John Doe")
+                );
+                assert_eq!(inspection.signature_b64, signature);
             }
             _ => panic!("expected Jwt"),
         }

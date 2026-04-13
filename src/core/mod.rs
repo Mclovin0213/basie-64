@@ -7,3 +7,4 @@ pub mod diff;
 pub mod encode;
 pub mod hash;
 pub mod history;
+pub mod jwt;

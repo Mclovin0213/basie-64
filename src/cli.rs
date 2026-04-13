@@ -182,7 +182,7 @@ fn run(cli: Cli) -> Result<String, String> {
             let text = resolve_text_input(input, file)?;
             match decode::decode_base64(&text) {
                 Ok((output, _variant)) => Ok(match output {
-                    decode::DecodeOutput::Jwt { formatted } => formatted,
+                    decode::DecodeOutput::Jwt(inspection) => inspection.to_display_string(),
                     decode::DecodeOutput::Text(s) => s,
                     decode::DecodeOutput::Binary { summary, .. } => summary,
                 }),

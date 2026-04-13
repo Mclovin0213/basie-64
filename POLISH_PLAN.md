@@ -54,7 +54,7 @@ Goal: things competing web tools *can't* easily do, that make this the obvious p
 - **Multi-format detect & convert** — auto-detect hex, Base32, Base58, URL-encoded, percent-encoded, and offer conversion
 - **Diff view** — paste two Base64 strings, see decoded diff side-by-side
 - **Hash + checksum sidebar** — show MD5/SHA-1/SHA-256 of decoded bytes (useful for verifying artifacts)
-- **JWT deep inspector** — signature verification against a pasted key, expiry highlighting, claim explanations
+- **JWT deep inspector** ✅ — structured parse, RFC 7519 claim explanations, humanized `exp`/`iat`/`nbf`, warnings (`alg:none`, expired, not-yet-valid, issued-in-future, missing `exp`), and local HMAC signature verification (HS256/384/512). Implemented in `src/core/jwt.rs` (pure, zero egui — CLI and GUI share it). Inspector card renders below the output text area in `src/ui/output.rs`. Asymmetric verification (RS256/ES256) is a follow-up.
 - **Image preview upgrades** — EXIF stripping, dimensions, file size; optional export
 - **Command palette** (Cmd/Ctrl+K) — every action reachable from keyboard
 - **CLI companion** — ship a `basie` CLI alongside the GUI using the same core crate, so power users can pipe to it. Great portfolio story: "shared core, two frontends."

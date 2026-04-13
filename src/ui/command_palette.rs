@@ -78,10 +78,8 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                             (app.command_palette_selected + filtered.len() - 1) % filtered.len();
                     }
                 }
-                if enter {
-                    if !filtered.is_empty() {
-                        execute_command = Some(filtered[app.command_palette_selected].0);
-                    }
+                if enter && !filtered.is_empty() {
+                    execute_command = Some(filtered[app.command_palette_selected].0);
                 }
                 if escape {
                     close_palette = true;
@@ -107,9 +105,8 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                             .show(ui, |ui| {
                                 for (list_idx, (cmd_id, _score)) in filtered.iter().enumerate() {
                                     let is_selected = list_idx == app.command_palette_selected;
-                                    let Some(cmd) = command_registry::COMMANDS
-                                        .iter()
-                                        .find(|c| c.id == *cmd_id)
+                                    let Some(cmd) =
+                                        command_registry::COMMANDS.iter().find(|c| c.id == *cmd_id)
                                     else {
                                         continue;
                                     };
@@ -186,8 +183,10 @@ fn render_command_row(
 
     // Now that we have the actual consumed rect, fill in the background shape.
     if bg_color != egui::Color32::TRANSPARENT {
-        ui.painter()
-            .set(bg_shape_idx, egui::Shape::rect_filled(resp.rect, 2.0, bg_color));
+        ui.painter().set(
+            bg_shape_idx,
+            egui::Shape::rect_filled(resp.rect, 2.0, bg_color),
+        );
     }
 
     if is_selected {

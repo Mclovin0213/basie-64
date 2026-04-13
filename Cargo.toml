@@ -37,6 +37,7 @@ similar = "2"
 clap = { version = "4", features = ["derive"] }
 sha2 = "0.10"
 md-5 = "0.10"
+hmac = "0.12"
 
 [package.metadata.bundle]
 name = "Basie-64"

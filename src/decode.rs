@@ -8,16 +8,24 @@ impl Basie64App {
         match decode_base64(b64) {
             Ok((output, variant)) => {
                 match &output {
-                    DecodeOutput::Jwt { formatted } => {
-                        self.output = formatted.clone();
+                    DecodeOutput::Jwt(inspection) => {
+                        self.output = inspection.to_display_string();
+                        self.jwt_inspection = Some((**inspection).clone());
+                        self.jwt_verification = None;
                         self.image_preview = None;
                     }
                     DecodeOutput::Text(s) => {
                         self.output = s.clone();
+                        self.jwt_inspection = None;
+                        self.jwt_secret_input.clear();
+                        self.jwt_verification = None;
                         self.image_preview = None;
                     }
                     DecodeOutput::Binary { bytes, summary } => {
                         self.output = summary.clone();
+                        self.jwt_inspection = None;
+                        self.jwt_secret_input.clear();
+                        self.jwt_verification = None;
 
                         if let Ok(img) = image::load_from_memory(bytes) {
                             let size = [img.width() as _, img.height() as _];
@@ -52,6 +60,9 @@ impl Basie64App {
                 self.error_hint = e.hint;
                 self.image_preview = None;
                 self.encoded_data_uri = None;
+                self.jwt_inspection = None;
+                self.jwt_secret_input.clear();
+                self.jwt_verification = None;
             }
         }
     }
