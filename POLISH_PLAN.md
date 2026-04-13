@@ -63,7 +63,7 @@ Goal: things competing web tools *can't* easily do, that make this the obvious p
   - `src/core/hash.rs` — `md5_hex`, `sha256_hex`, `sha256_base64`.
   - ⚠️ SHA-1 from the original spec is *not* implemented. If SHA-1 still matters for artifact verification, add it here.
 - **JWT deep inspector** ✅ — structured parse, RFC 7519 claim explanations, humanized `exp`/`iat`/`nbf`, warnings (`alg:none`, expired, not-yet-valid, issued-in-future, missing `exp`), and local HMAC signature verification (HS256/384/512). Implemented in `src/core/jwt.rs` (pure, zero egui — CLI and GUI share it). Inspector card renders below the output text area in `src/ui/output.rs`. Asymmetric verification (RS256/ES256) is a follow-up.
-- **Image preview upgrades** ⚠️ **NOT SHIPPED.** The current behavior is: a preview appears when decoded bytes look like an image, and "Save as File" uses the existing generic path. The richer flow specced for Phase 2 — EXIF extraction, a metadata bar showing dimensions / MIME / file size, a dedicated Export Image dialog with optional EXIF stripping — was never implemented. Adding it requires pulling `kamadak-exif` into `Cargo.toml` and a new section in `src/ui/output.rs` below the preview image. Note: an "Export Image" entry exists at `src/core/command_registry.rs:115` but dispatches to the same generic save path, not the richer flow.
+- **Image preview upgrades** ✅ — shipped in a60946a. `src/core/image_meta.rs` parses image kind (PNG/JPEG/GIF/WebP/BMP/ICO), dimensions, and EXIF fields via `kamadak-exif`, and performs lossless metadata stripping (EXIF segments, PNG text chunks, XMP, IPTC). The metadata bar renders below the preview in `src/ui/output.rs` (`image_meta_bar` submodule) with kind · WxH · size, a collapsible EXIF field list, and an Export… button. The `src/ui/export_image_dialog.rs` modal handles saving with an optional "Strip metadata before saving" checkbox; the Cmd+K "Export Image" command routes through the same dialog. Asymmetric image formats (SVG, AVIF) are still a follow-up.
 - **Command palette** (Cmd/Ctrl+K) ✅ — every action reachable from keyboard.
   - `src/core/command_registry.rs` — 15 registered commands with id / name / keywords / shortcut, plus `filter_commands` fuzzy matcher.
   - `src/ui/command_palette.rs` — centered overlay, search input, arrow/enter/escape navigation, dispatches to `Basie64App` methods.
@@ -73,7 +73,6 @@ Goal: things competing web tools *can't* easily do, that make this the obvious p
 
 ### Phase 2 — Known gaps
 
-- **Image preview upgrades** (see above) — the one specced feature that never shipped.
 - **Private mode UX is minimal.** The toggle lives only in the top-bar settings menu. There's no visible banner, no session-only override, and no clear indicator that history writes are currently suppressed. If this feature is user-facing, it needs surfacing.
 - **JWT asymmetric verification (RS256/ES256)** remains a follow-up (as originally noted).
 
@@ -193,7 +192,7 @@ Goal: extract maximum career value from the work.
 | Milestone | Phases | Status | Output |
 |---|---|---|---|
 | **v0.3 — "Feels Finished"** | 1, partial 3 | ✅ shipped | Polished UX, light mode, settings, clean codebase |
-| **v0.4 — "Power User"** | 2, rest of 3 | 🟡 nearly shipped | History, batch mode, diff view, multi-format detect/convert, JWT inspector, hash, command palette, CLI companion. **Remaining:** image preview upgrades (EXIF/metadata/export), property/fuzz/snapshot tests, private-mode UX. |
+| **v0.4 — "Power User"** | 2, rest of 3 | 🟡 nearly shipped | History, batch mode, diff view, multi-format detect/convert, JWT inspector, hash, command palette, CLI companion, image metadata + Export Image dialog. **Remaining:** property/fuzz/snapshot tests, private-mode UX. |
 | **v1.0 — "Shippable"** | 4, 5 | ⏳ next focus | Branding, installers, signing, auto-update |
 | **v1.0 Launch** | 6, 7 | ⏳ | Docs, landing page, case study, public launch |
 

@@ -2,7 +2,7 @@
 
 Offline-first Base64 encoder/decoder built in Rust + egui (eframe), shipped as both a GUI (`basie-64`) and a CLI (`basie`). Goal: *the* Base64 tool a developer reaches for — best-in-class at a narrow job, never phones home.
 
-**Active roadmap:** `POLISH_PLAN.md`. Phase 2 ("Power User") is largely shipped — the one notable gap is the richer image flow (EXIF / metadata bar / Export Image dialog). Phase 3+ (code-quality audit, branding, packaging, distribution, launch) is still pending.
+**Active roadmap:** `POLISH_PLAN.md`. Phase 2 ("Power User") is shipped — including the richer image flow (EXIF extraction, metadata bar, Export Image dialog with lossless metadata stripping). Phase 3+ (code-quality audit, branding, packaging, distribution, launch) is still pending.
 
 ---
 
@@ -17,7 +17,7 @@ src/
 ├── theme.rs             Theme enum (Light/Dark/System), palette application, icon loading.
 ├── settings.rs          Persisted prefs (theme, private_mode, recent files) — TOML in OS config dir via `directories`.
 ├── samples.rs           Hard-coded sample payloads (JWT, PNG data URI, JSON) for the Samples menu.
-├── decode.rs            Thin app-level wrapper: calls core::decode and mutates Basie64App state (output, jwt_inspection, image_preview, error, history).
+├── decode.rs            Thin app-level wrapper: calls core::decode and mutates Basie64App state (output, jwt_inspection, image_preview, image_meta, error, history).
 ├── detect.rs            Thin app-level wrapper: calls core::detect and mutates Basie64App state (detected_format, banners, mixed_matches, diff split).
 ├── core/                Pure Rust. Zero egui imports. Shared by GUI and CLI.
 │   ├── mod.rs           Submodule declarations.
@@ -30,13 +30,15 @@ src/
 │   ├── diff.rs          parse_diff_input (splits on `\n---\n` or `\n===\n`), diff_text via `similar` crate, diff_binary hex-dump.
 │   ├── batch.rs         BatchOp / BatchSource / BatchConfig / BatchPreview / BatchProgress / BatchResult. process_batch_with_progress runs the threaded pipeline.
 │   ├── convert.rs       Cross-format conversion between Base64 / Hex / Base32 / Base58 / PercentEncoded.
+│   ├── image_meta.rs    Image kind detection (PNG/JPEG/GIF/WebP/BMP/ICO), dimensions, EXIF parsing via `kamadak-exif`, lossless metadata stripping (EXIF / text chunks / XMP / IPTC).
 │   └── command_registry.rs  Static Command list (id, name, keywords, shortcut) + filter_commands fuzzy search for the palette.
 └── ui/                  egui widgets. Imports core/ for logic and reads/writes Basie64App state directly.
     ├── mod.rs
     ├── top_bar.rs       Draggable titlebar, theme toggle, settings menu (private-mode toggle), history-panel toggle, close button.
     ├── input.rs         Input text area, empty-state hint, samples menu, large-paste guard.
     ├── buttons.rs       Action row: Encode / Decode / Diff / Save as File / Clear + batch folder/file dialogs.
-    ├── output.rs        Output monospace area, Copy / Copy as Data URI, image preview, JWT inspector subpanel (payload viewer + HMAC secret input + verification).
+    ├── output.rs        Output monospace area, Copy / Copy as Data URI, image preview + image metadata bar (kind/dimensions/size, EXIF collapsible, Export… button), JWT inspector subpanel (payload viewer + HMAC secret input + verification).
+    ├── export_image_dialog.rs  Modal dialog for saving decoded images with optional lossless metadata stripping; backdrop + centered window, EXIF field list, strip checkbox, Save / Cancel.
     ├── banner.rs        Smart-detection banner (with fade-in), convert-format hint, mixed-matches list, error + hint row.
     ├── history_panel.rs Bottom panel: search box, entry list, Enter/double-click reload, Delete removes, Clear All.
     ├── batch_panel.rs   Bottom panel: batch preview, confirmation, progress, results table.
@@ -92,6 +94,9 @@ cargo clippy --all-targets -- -D warnings    # lint (must be clean)
 | Diff view UI | `src/ui/diff_view.rs` |
 | Command palette entries / fuzzy match | `src/core/command_registry.rs` |
 | Command palette overlay UI | `src/ui/command_palette.rs` |
+| Image kind / dimensions / EXIF / metadata stripping | `src/core/image_meta.rs` |
+| Image preview + metadata bar UI | `src/ui/output.rs` (`image_meta_bar` submodule) |
+| Export Image dialog (lossless strip) | `src/ui/export_image_dialog.rs` |
 | Error messages and hints | `src/core/decode.rs` + `src/ui/banner.rs` |
 | Config file format | `src/settings.rs` |
 | CLI subcommands | `src/cli.rs` |
