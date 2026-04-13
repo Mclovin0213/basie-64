@@ -43,22 +43,39 @@ Goal: the app feels finished the moment you open it.
 
 Goal: things competing web tools *can't* easily do, that make this the obvious pick.
 
-- **History panel** ✅ — timestamped, searchable list of recent encodes/decodes (local only, clearable, with a "private mode" toggle for sensitive data). Implemented in `v0.3.1`:
-  - `src/core/history.rs` — `HistoryEntry` + `HistoryStore` (JSON persistence, FIFO eviction at 200 entries, search filtering, stable entry IDs, full-input reload support)
+- **History panel** ✅ — timestamped, searchable list of recent encodes/decodes (local only, clearable, with a "private mode" toggle for sensitive data).
+  - `src/core/history.rs` — `HistoryEntry` + `HistoryStore` (TOML persistence, FIFO eviction at 200 entries, search filtering, stable entry IDs, full-input reload support)
   - `src/ui/history_panel.rs` — Collapsible bottom panel with dedicated search state, row selection, Enter/double-click reload, per-entry delete, clear all
   - Keyboard shortcut: Cmd/Ctrl+H to toggle
-  - Private mode toggle in top-bar settings (persisted in `settings.private_mode`)
-  - First `core/` module — pure logic, zero `egui` imports (unblocks CLI companion)
-  - Tests cover append, eviction, search, private mode, exact delete, full-input reload, and encode/decode round-trip restore
-- **Batch mode** — drop a folder, encode/decode every file, export as a manifest
-- **Multi-format detect & convert** — auto-detect hex, Base32, Base58, URL-encoded, percent-encoded, and offer conversion
-- **Diff view** — paste two Base64 strings, see decoded diff side-by-side
-- **Hash + checksum sidebar** — show MD5/SHA-1/SHA-256 of decoded bytes (useful for verifying artifacts)
+  - Private mode toggle in top-bar settings (persisted in `settings.private_mode`). UX is minimal — see "Known gaps" below.
+- **Batch mode** ✅ — drop a folder (or select multiple files), encode or decode every file, view a results table with per-file status.
+  - `src/core/batch.rs` — `BatchOp` / `BatchSource` / `BatchConfig` / `BatchPreview` / `BatchProgress` / `BatchResult`, threaded `process_batch_with_progress`.
+  - `src/ui/batch_panel.rs` — preview confirmation, progress indicator, results table.
+- **Multi-format detect & convert** ✅ — auto-detect Percent / Hex / Base32 / Base58 / Base64 and offer conversion between them.
+  - `src/core/detect.rs` — priority scan (Percent → Hex → Base32 → Base58 → Base64) returning a `DetectionResult` with banner text and mixed-content matches.
+  - `src/core/convert.rs` — round-trip between every pair of the supported formats.
+  - `src/ui/banner.rs` — detection banner with "Convert to Base64?" suggestion when a non-Base64 format is matched.
+- **Diff view** ✅ — paste two Base64 strings, see decoded diff side-by-side (text or binary hex-dump).
+  - `src/core/diff.rs` — `parse_diff_input` splits on `\n---\n` / `\n===\n`; `diff_text` uses the `similar` crate; `diff_binary` produces a byte-aligned hex-dump comparison.
+  - `src/ui/diff_view.rs` — full-screen side-by-side view with additions/removals/unchanged summary.
+  - Activation: delimiter in the input, or Cmd+D from the command palette.
+- **Hash + checksum sidebar** ✅ — show MD5 / SHA-256 of decoded bytes.
+  - `src/core/hash.rs` — `md5_hex`, `sha256_hex`, `sha256_base64`.
+  - ⚠️ SHA-1 from the original spec is *not* implemented. If SHA-1 still matters for artifact verification, add it here.
 - **JWT deep inspector** ✅ — structured parse, RFC 7519 claim explanations, humanized `exp`/`iat`/`nbf`, warnings (`alg:none`, expired, not-yet-valid, issued-in-future, missing `exp`), and local HMAC signature verification (HS256/384/512). Implemented in `src/core/jwt.rs` (pure, zero egui — CLI and GUI share it). Inspector card renders below the output text area in `src/ui/output.rs`. Asymmetric verification (RS256/ES256) is a follow-up.
-- **Image preview upgrades** — EXIF stripping, dimensions, file size; optional export
-- **Command palette** (Cmd/Ctrl+K) — every action reachable from keyboard
-- **CLI companion** — ship a `basie` CLI alongside the GUI using the same core crate, so power users can pipe to it. Great portfolio story: "shared core, two frontends."
-- **Plugin/extension-ready architecture** *(optional, only if it falls out naturally)* — don't over-engineer, but splitting core logic from UI makes the CLI above trivial.
+- **Image preview upgrades** ⚠️ **NOT SHIPPED.** The current behavior is: a preview appears when decoded bytes look like an image, and "Save as File" uses the existing generic path. The richer flow specced for Phase 2 — EXIF extraction, a metadata bar showing dimensions / MIME / file size, a dedicated Export Image dialog with optional EXIF stripping — was never implemented. Adding it requires pulling `kamadak-exif` into `Cargo.toml` and a new section in `src/ui/output.rs` below the preview image. Note: an "Export Image" entry exists at `src/core/command_registry.rs:115` but dispatches to the same generic save path, not the richer flow.
+- **Command palette** (Cmd/Ctrl+K) ✅ — every action reachable from keyboard.
+  - `src/core/command_registry.rs` — 15 registered commands with id / name / keywords / shortcut, plus `filter_commands` fuzzy matcher.
+  - `src/ui/command_palette.rs` — centered overlay, search input, arrow/enter/escape navigation, dispatches to `Basie64App` methods.
+- **CLI companion** ✅ — `basie` CLI ships alongside the GUI via a second `[[bin]]` in `Cargo.toml`, linking only `core/`.
+  - `src/cli.rs` — clap subcommands: `encode`, `decode`, `convert`, `detect`, `diff`, `hash`. Supports stdin input and `--output` file writes.
+- **Shared-core architecture** ✅ — the `core/` vs `ui/` split that this roadmap anticipated is done. The CLI reuses every piece of logic the GUI uses; no duplication.
+
+### Phase 2 — Known gaps
+
+- **Image preview upgrades** (see above) — the one specced feature that never shipped.
+- **Private mode UX is minimal.** The toggle lives only in the top-bar settings menu. There's no visible banner, no session-only override, and no clear indicator that history writes are currently suppressed. If this feature is user-facing, it needs surfacing.
+- **JWT asymmetric verification (RS256/ES256)** remains a follow-up (as originally noted).
 
 ---
 
@@ -66,16 +83,16 @@ Goal: things competing web tools *can't* easily do, that make this the obvious p
 
 Goal: the codebase reviews well in a portfolio context.
 
-- **Refactor the monolith** — split `main.rs` into `core/` (encoding, detection, JWT), `ui/` (egui widgets), and `app.rs` (state + wiring). Keep it pragmatic, not over-architected.
-- **Expand test coverage**
-  - Property-based tests (via `proptest`) for round-trip encode/decode
+- **Refactor the monolith** ✅ — `main.rs` / `app.rs` / `core/` / `ui/` split is done. The `core/` boundary is now load-bearing for the CLI.
+- **Expand test coverage** — unit tests exist across `core/` but the following are still pending:
+  - Property-based tests (via `proptest`) for round-trip encode/decode and cross-format conversion
   - Snapshot tests for UI state transitions
   - Fuzz target for the detection/scanner logic
 - **Linting & formatting**
-  - `cargo fmt` enforcement in CI
-  - `cargo clippy -- -D warnings` gate
-  - `cargo deny` for license + security audit
-- **Error handling audit** — replace any `unwrap`/`expect` in user-facing paths with real errors
+  - `cargo fmt` enforcement in CI — status unverified, check the workflow
+  - `cargo clippy -- -D warnings` gate — runs locally clean; CI enforcement unverified
+  - `cargo deny` for license + security audit — not configured
+- **Error handling audit** — spot-audit pending. No remaining `unwrap`/`expect` calls were flagged during the docs-cleanup pass, but a focused sweep across every user-input path hasn't been done.
 - **Performance pass** — benchmark large-file encode/decode, streaming where it matters
 - **Crash reporting** — optional, opt-in only (respect the privacy pitch)
 
@@ -173,12 +190,12 @@ Goal: extract maximum career value from the work.
 
 ## Suggested Ordering & Milestones
 
-| Milestone | Phases | Output |
-|---|---|---|
-| **v0.3 — "Feels Finished"** | 1, partial 3 | Polished UX, light mode, settings, clean codebase |
-| **v0.4 — "Power User"** | 2, rest of 3 | History, batch mode, CLI companion, full test suite |
-| **v1.0 — "Shippable"** | 4, 5 | Branding, installers, signing, auto-update |
-| **v1.0 Launch** | 6, 7 | Docs, landing page, case study, public launch |
+| Milestone | Phases | Status | Output |
+|---|---|---|---|
+| **v0.3 — "Feels Finished"** | 1, partial 3 | ✅ shipped | Polished UX, light mode, settings, clean codebase |
+| **v0.4 — "Power User"** | 2, rest of 3 | 🟡 nearly shipped | History, batch mode, diff view, multi-format detect/convert, JWT inspector, hash, command palette, CLI companion. **Remaining:** image preview upgrades (EXIF/metadata/export), property/fuzz/snapshot tests, private-mode UX. |
+| **v1.0 — "Shippable"** | 4, 5 | ⏳ next focus | Branding, installers, signing, auto-update |
+| **v1.0 Launch** | 6, 7 | ⏳ | Docs, landing page, case study, public launch |
 
 Treat the milestones as checkpoints, not deadlines — ship each when it actually feels done.
 
@@ -196,4 +213,16 @@ To keep scope honest:
 
 ---
 
-*Last updated: 2026-04-11*
+## Version drift — needs reconciling before the next release
+
+Three different version numbers are currently in play:
+
+- `Cargo.toml` `[package]` → `version = "0.2.0"`
+- `Cargo.toml` `[package.metadata.bundle]` → `version = "0.1.0"`
+- This roadmap's milestone table → v0.3 shipped, v0.4 nearly shipped
+
+Given the feature set actually in the tree, the `[package]` version is the one most out of date. Pick a real cadence (e.g. bump `[package]` to `0.4.0` and sync the bundle metadata) during the next release cut so the `CHANGELOG.md` (Phase 5) has something honest to reference.
+
+---
+
+*Last updated: 2026-04-12*

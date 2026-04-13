@@ -19,12 +19,19 @@ Basie-64 is an elegant, fast, and feature-rich Base64 encoder/decoder designed f
 
 ## ✨ Features
 
-*   **⚡️ Smart Detection**: Paste a massive blob of text, logs, or JSON. Basie-64 will automatically find and extract hidden Base64 strings.
+*   **⚡️ Smart Detection**: Paste a massive blob of text, logs, or JSON. Basie-64 will automatically find and extract hidden Base64 strings — and recognize Hex, Base32, Base58, and percent-encoded strings too.
+*   **🔁 Multi-format Convert**: Round-trip between Base64, Hex, Base32, Base58, and percent-encoding with a single click.
+*   **🪪 JWT Inspector**: Paste a JWT and get structured claims, humanized `exp`/`iat`/`nbf`, safety warnings (`alg:none`, expired, not-yet-valid), and local HMAC signature verification (HS256/384/512) — nothing leaves your machine.
 *   **📂 Drag & Drop File Support**: Drop any file directly into the app to instantly get its Base64 encoding.
+*   **🗂️ Batch Mode**: Drop a folder, encode or decode every file, and review the results in a per-file status table.
+*   **🪞 Diff View**: Paste two Base64 strings separated by `---` and see a decoded diff side-by-side — text or binary hex-dump.
+*   **🔢 Hashes at a Glance**: MD5 and SHA-256 of the decoded bytes, ready to copy.
 *   **💾 Decode to File**: Safely decode Base64 back into its original file format (images, binaries, pdfs, etc.) with automatic file-type inference and native save dialogs.
-*   **🖼️ Live Image Previews**: If the decoded Base64 contains an image, Basie-64 renders it live right inside the UI!
+*   **🖼️ Live Image Previews**: If the decoded Base64 contains an image, Basie-64 renders it live right inside the UI.
 *   **🕘 Local History Panel**: Browse recent encodes and decodes with search, keyboard navigation, reload, delete, clear-all, and a private mode toggle for sensitive work.
-*   **🎨 Native & Beautiful**: A dark-themed, perfectly spaced modern UI that feels native on any OS.
+*   **⌨️ Command Palette**: Every action reachable from the keyboard via a fuzzy-searchable Cmd/Ctrl+K overlay.
+*   **🖥️ CLI Companion**: A `basie` CLI ships alongside the GUI, sharing the same core crate — pipe `echo "Hello" | basie encode`, run `basie decode`, `basie diff`, `basie hash`, and more.
+*   **🎨 Native & Beautiful**: Light, dark, and system-follow themes on a perfectly spaced modern UI that feels native on any OS.
 
 ## 🚀 Downloads & Installation
 
