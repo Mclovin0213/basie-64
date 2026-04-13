@@ -47,6 +47,8 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
                 ui.add_space(8.0);
                 ui.label("Image Preview:");
                 ui.add(egui::Image::new(texture).max_width(ui.available_width()));
+                ui.add_space(6.0);
+                image_meta_bar::show(ui, app);
             }
         });
     });
@@ -70,6 +72,116 @@ fn copy_button_label(app: &Basie64App) -> &'static str {
     match app.copy_pulse_at {
         Some(started) if app.now - started < COPY_PULSE_DURATION => "✓ Copied!",
         _ => "📋 Copy",
+    }
+}
+
+mod image_meta_bar {
+    use crate::app::Basie64App;
+    use eframe::egui;
+
+    const WARN_COLOR: egui::Color32 = egui::Color32::from_rgb(0xE0, 0x9F, 0x3E);
+
+    pub fn show(ui: &mut egui::Ui, app: &mut Basie64App) {
+        let Some(meta) = app.image_meta.clone() else {
+            return;
+        };
+
+        egui::Frame::group(ui.style()).show(ui, |ui| {
+            ui.vertical(|ui| {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        egui::RichText::new(format!(
+                            "{} · {}×{} · {}",
+                            meta.kind.label(),
+                            meta.width,
+                            meta.height,
+                            humanize_size(meta.size_bytes),
+                        ))
+                        .monospace(),
+                    );
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        if ui
+                            .button("Export…")
+                            .on_hover_text("Open the Export Image dialog")
+                            .clicked()
+                        {
+                            let ctx = ui.ctx().clone();
+                            app.open_export_image_dialog(&ctx);
+                        }
+                    });
+                });
+
+                if !meta.exif.is_empty() {
+                    ui.add_space(2.0);
+                    let collapse_id = ui.id().with("image_meta_exif_collapse");
+                    egui::collapsing_header::CollapsingState::load_with_default_open(
+                        ui.ctx(),
+                        collapse_id,
+                        false,
+                    )
+                    .show_header(ui, |ui| {
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "⚠ {} EXIF {}",
+                                meta.exif.len(),
+                                if meta.exif.len() == 1 {
+                                    "field"
+                                } else {
+                                    "fields"
+                                },
+                            ))
+                            .color(WARN_COLOR),
+                        );
+                    })
+                    .body(|ui| {
+                        egui::ScrollArea::vertical()
+                            .id_salt("image_meta_exif_scroll")
+                            .max_height(160.0)
+                            .show(ui, |ui| {
+                                egui::Grid::new("image_meta_exif_grid")
+                                    .num_columns(2)
+                                    .spacing([12.0, 2.0])
+                                    .striped(true)
+                                    .show(ui, |ui| {
+                                        for field in &meta.exif {
+                                            ui.label(
+                                                egui::RichText::new(&field.tag).monospace().small(),
+                                            );
+                                            ui.label(
+                                                egui::RichText::new(&field.value)
+                                                    .monospace()
+                                                    .small(),
+                                            );
+                                            ui.end_row();
+                                        }
+                                    });
+                            });
+                    });
+                } else if meta.has_strippable_metadata {
+                    ui.add_space(2.0);
+                    ui.label(
+                        egui::RichText::new("⚠ Non-EXIF metadata present (text / XMP / IPTC)")
+                            .color(WARN_COLOR)
+                            .small(),
+                    );
+                }
+            });
+        });
+    }
+
+    fn humanize_size(bytes: usize) -> String {
+        const KB: usize = 1024;
+        const MB: usize = KB * 1024;
+        const GB: usize = MB * 1024;
+        if bytes >= GB {
+            format!("{:.2} GB", bytes as f64 / GB as f64)
+        } else if bytes >= MB {
+            format!("{:.2} MB", bytes as f64 / MB as f64)
+        } else if bytes >= KB {
+            format!("{:.1} KB", bytes as f64 / KB as f64)
+        } else {
+            format!("{} B", bytes)
+        }
     }
 }
 

@@ -275,7 +275,7 @@ fn execute_command_by_id(app: &mut Basie64App, cmd_id: &str, ctx: &egui::Context
             app.mark_copy_pulse();
         }
         "export_image" => {
-            app.save_to_file();
+            app.open_export_image_dialog(ctx);
         }
         _ => {}
     }

@@ -12,14 +12,14 @@ impl Basie64App {
                         self.output = inspection.to_display_string();
                         self.jwt_inspection = Some((**inspection).clone());
                         self.jwt_verification = None;
-                        self.image_preview = None;
+                        self.clear_image_state();
                     }
                     DecodeOutput::Text(s) => {
                         self.output = s.clone();
                         self.jwt_inspection = None;
                         self.jwt_secret_input.clear();
                         self.jwt_verification = None;
-                        self.image_preview = None;
+                        self.clear_image_state();
                     }
                     DecodeOutput::Binary { bytes, summary } => {
                         self.output = summary.clone();
@@ -38,8 +38,11 @@ impl Basie64App {
                                 color_image,
                                 egui::TextureOptions::LINEAR,
                             ));
+                            self.image_meta = crate::core::image_meta::inspect(bytes);
+                            self.image_bytes = Some(bytes.clone());
+                            self.export_image_dialog = None;
                         } else {
-                            self.image_preview = None;
+                            self.clear_image_state();
                         }
                     }
                 }
@@ -58,7 +61,7 @@ impl Basie64App {
             Err(e) => {
                 self.error = Some(e.message);
                 self.error_hint = e.hint;
-                self.image_preview = None;
+                self.clear_image_state();
                 self.encoded_data_uri = None;
                 self.jwt_inspection = None;
                 self.jwt_secret_input.clear();

@@ -3,6 +3,7 @@ pub mod batch_panel;
 pub mod buttons;
 pub mod command_palette;
 pub mod diff_view;
+pub mod export_image_dialog;
 pub mod history_panel;
 pub mod input;
 pub mod output;

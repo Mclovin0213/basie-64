@@ -31,6 +31,13 @@ pub struct Basie64App {
     pub(crate) image_preview: Option<egui::TextureHandle>,
     pub(crate) encoded_data_uri: Option<String>,
 
+    /// Raw decoded image bytes, kept alive for the Export Image flow.
+    pub(crate) image_bytes: Option<Vec<u8>>,
+    /// Format / dimensions / EXIF metadata for the decoded image.
+    pub(crate) image_meta: Option<crate::core::image_meta::ImageMeta>,
+    /// Modal state for the Export Image dialog (`None` = closed).
+    pub(crate) export_image_dialog: Option<ExportImageDialog>,
+
     /// Structured JWT inspection data, populated when the current decode
     /// result is a JWT. Cleared on every other decode/encode/clear path.
     pub(crate) jwt_inspection: Option<crate::core::jwt::JwtInspection>,
@@ -94,6 +101,15 @@ pub struct BatchPending {
     pub preview: BatchPreview,
 }
 
+/// Modal state for the Export Image dialog.
+#[derive(Clone, Debug)]
+pub struct ExportImageDialog {
+    /// Whether to strip EXIF / text metadata before saving.
+    pub strip_metadata: bool,
+    /// Whether the detailed EXIF field list is currently expanded.
+    pub exif_expanded: bool,
+}
+
 pub enum BatchWorkerMessage {
     Progress(BatchProgress),
     Finished(BatchResult),
@@ -118,6 +134,9 @@ impl Default for Basie64App {
             mixed_matches: Vec::new(),
             image_preview: None,
             encoded_data_uri: None,
+            image_bytes: None,
+            image_meta: None,
+            export_image_dialog: None,
             jwt_inspection: None,
             jwt_secret_input: String::new(),
             jwt_verification: None,
@@ -156,6 +175,16 @@ impl Default for Basie64App {
 }
 
 impl Basie64App {
+    /// Reset every image-related piece of state at once.
+    /// Called alongside the existing `clear`/`decode`/`restore` paths so
+    /// the preview, cached bytes, metadata, and dialog never drift apart.
+    pub(crate) fn clear_image_state(&mut self) {
+        self.image_preview = None;
+        self.image_bytes = None;
+        self.image_meta = None;
+        self.export_image_dialog = None;
+    }
+
     pub fn clear(&mut self) {
         self.input.clear();
         self.output.clear();
@@ -163,7 +192,7 @@ impl Basie64App {
         self.error_hint = None;
         self.show_banner = false;
         self.mixed_matches.clear();
-        self.image_preview = None;
+        self.clear_image_state();
         self.encoded_data_uri = None;
         self.jwt_inspection = None;
         self.jwt_secret_input.clear();
@@ -226,6 +255,133 @@ impl Basie64App {
         }
     }
 
+    /// If no image is currently cached, try to decode `self.input` and
+    /// populate `image_bytes` / `image_meta` / `image_preview` on the fly.
+    /// Returns `true` if an image is ready after the call.
+    ///
+    /// This keeps the command-palette Export path working even when the
+    /// user pastes a Base64 image and jumps straight to Export without
+    /// clicking Decode first — matching the pre-refactor behavior.
+    fn ensure_image_cached(&mut self, ctx: &egui::Context) -> bool {
+        if self.image_bytes.is_some() && self.image_meta.is_some() {
+            return true;
+        }
+
+        let clean_b64: String = self
+            .input
+            .trim()
+            .chars()
+            .filter(|c| !c.is_whitespace())
+            .collect();
+        let b64_content = if let Some(idx) = clean_b64.find("base64,") {
+            &clean_b64[idx + 7..]
+        } else {
+            clean_b64.as_str()
+        };
+
+        let bytes = general_purpose::STANDARD
+            .decode(b64_content)
+            .or_else(|_| general_purpose::URL_SAFE.decode(b64_content))
+            .or_else(|_| general_purpose::URL_SAFE_NO_PAD.decode(b64_content))
+            .ok();
+        let Some(bytes) = bytes else {
+            return false;
+        };
+
+        let Ok(img) = image::load_from_memory(&bytes) else {
+            return false;
+        };
+
+        let size = [img.width() as _, img.height() as _];
+        let image_buffer = img.into_rgba8();
+        let pixels = image_buffer.as_flat_samples();
+        let color_image = egui::ColorImage::from_rgba_unmultiplied(size, pixels.as_slice());
+        self.image_preview =
+            Some(ctx.load_texture("preview", color_image, egui::TextureOptions::LINEAR));
+        self.image_meta = crate::core::image_meta::inspect(&bytes);
+        self.image_bytes = Some(bytes);
+        true
+    }
+
+    /// Open the Export Image dialog for the currently-decoded image. If no
+    /// image is cached, attempt to decode `self.input` first; only set a
+    /// friendly error banner if that fails too.
+    pub fn open_export_image_dialog(&mut self, ctx: &egui::Context) {
+        if !self.ensure_image_cached(ctx) {
+            self.error = Some(
+                "Current input doesn't decode to an image — paste a Base64-encoded image first."
+                    .into(),
+            );
+            self.error_hint = None;
+            return;
+        }
+
+        let strip_default = self
+            .image_meta
+            .as_ref()
+            .map(|m| m.has_strippable_metadata && m.strip_supported)
+            .unwrap_or(false);
+
+        self.export_image_dialog = Some(ExportImageDialog {
+            strip_metadata: strip_default,
+            exif_expanded: false,
+        });
+    }
+
+    /// Close the Export Image dialog without saving.
+    pub fn close_export_image_dialog(&mut self) {
+        self.export_image_dialog = None;
+    }
+
+    /// Run the Export Image dialog's Save action: optionally strip metadata,
+    /// then prompt for a destination path and write the bytes.
+    pub fn execute_export_image_save(&mut self) {
+        let Some(dialog) = self.export_image_dialog.clone() else {
+            return;
+        };
+        let Some(meta) = self.image_meta.clone() else {
+            return;
+        };
+        let Some(source_bytes) = self.image_bytes.clone() else {
+            return;
+        };
+
+        let bytes_to_write = if dialog.strip_metadata && meta.strip_supported {
+            match crate::core::image_meta::strip_metadata(&source_bytes, meta.kind) {
+                Ok(stripped) => stripped,
+                Err(e) => {
+                    self.error = Some(format!("Failed to strip metadata: {}", e));
+                    self.error_hint = None;
+                    return;
+                }
+            }
+        } else {
+            source_bytes
+        };
+
+        let extension = meta.kind.extension();
+        if let Some(path) = rfd::FileDialog::new()
+            .add_filter(meta.kind.label(), &[extension])
+            .set_file_name(format!("decoded.{}", extension))
+            .save_file()
+        {
+            match std::fs::write(&path, &bytes_to_write) {
+                Ok(()) => {
+                    self.output = format!("Saved image to {}", path.display());
+                    self.error = None;
+                    self.error_hint = None;
+                    self.settings.push_recent_file(path);
+                    self.settings.save();
+                    self.export_image_dialog = None;
+                }
+                Err(e) => {
+                    self.error = Some(format!("Failed to save file: {}", e));
+                    self.error_hint = None;
+                }
+            }
+        }
+    }
+
     pub fn mark_copy_pulse(&mut self) {
         self.copy_pulse_at = Some(self.now);
     }
@@ -234,7 +390,7 @@ impl Basie64App {
         self.output = crate::core::encode::encode_base64(&self.input);
         self.error = None;
         self.error_hint = None;
-        self.image_preview = None;
+        self.clear_image_state();
         self.encoded_data_uri = Some(format!("data:text/plain;base64,{}", self.output));
         self.jwt_inspection = None;
         self.jwt_verification = None;
@@ -254,7 +410,7 @@ impl Basie64App {
                 self.output = result;
                 self.error = None;
                 self.error_hint = None;
-                self.image_preview = None;
+                self.clear_image_state();
                 self.encoded_data_uri = None;
                 self.jwt_inspection = None;
                 self.jwt_verification = None;
@@ -417,7 +573,7 @@ impl Basie64App {
         self.error_hint = None;
         self.show_banner = false;
         self.mixed_matches.clear();
-        self.image_preview = None;
+        self.clear_image_state();
         self.encoded_data_uri = None;
         self.jwt_inspection = None;
         self.jwt_secret_input.clear();
@@ -622,7 +778,7 @@ impl Basie64App {
             self.error_hint = None;
             self.show_banner = false;
             self.mixed_matches.clear();
-            self.image_preview = None;
+            self.clear_image_state();
             self.settings.push_recent_file(path.clone());
             self.settings.save();
         }
@@ -673,8 +829,26 @@ impl eframe::App for Basie64App {
             self.applied_theme = Some(self.settings.theme);
         }
 
-        // Keyboard shortcuts
+        // Keyboard shortcuts. While the Export Image dialog is open it acts
+        // as a true modal — only Escape is honored, everything else is
+        // suppressed so the user can't mutate state behind the overlay.
+        let dialog_modal_active = self.export_image_dialog.is_some();
         ctx.input(|i| {
+            if i.key_pressed(egui::Key::Escape) {
+                if self.show_command_palette {
+                    self.show_command_palette = false;
+                    self.command_palette_query.clear();
+                } else if dialog_modal_active {
+                    self.close_export_image_dialog();
+                } else {
+                    self.clear();
+                }
+            }
+
+            if dialog_modal_active {
+                return;
+            }
+
             if i.modifiers.command && i.key_pressed(egui::Key::Enter) {
                 self.request_decode(ctx);
             }
@@ -688,14 +862,6 @@ impl eframe::App for Basie64App {
             {
                 ctx.copy_text(self.output.clone());
                 self.copy_pulse_at = Some(self.now);
-            }
-            if i.key_pressed(egui::Key::Escape) {
-                if self.show_command_palette {
-                    self.show_command_palette = false;
-                    self.command_palette_query.clear();
-                } else {
-                    self.clear();
-                }
             }
             if i.modifiers.command && i.key_pressed(egui::Key::H) {
                 self.show_history_panel = !self.show_history_panel;
@@ -773,6 +939,10 @@ impl eframe::App for Basie64App {
             ui::command_palette::show(self, ctx);
         }
 
+        if self.export_image_dialog.is_some() {
+            ui::export_image_dialog::show(self, ctx);
+        }
+
         // Keep animations ticking
         if self.copy_pulse_at.is_some()
             || ui::banner::is_fade_active(self.banner_fade_start, self.now)
@@ -802,6 +972,81 @@ mod tests {
     fn regex_compiles_via_default() {
         let app = Basie64App::default();
         assert!(app.base64_regex.is_match("SGVsbG8sIHdvcmxkIQ=="));
+    }
+
+    fn tiny_png_bytes() -> Vec<u8> {
+        let img = image::RgbaImage::from_pixel(2, 2, image::Rgba([10, 20, 30, 255]));
+        let mut buf = Vec::new();
+        img.write_to(&mut std::io::Cursor::new(&mut buf), image::ImageFormat::Png)
+            .expect("png encode");
+        buf
+    }
+
+    #[test]
+    fn open_export_image_dialog_decodes_fresh_input() {
+        // Regression: the command-palette Export path must work when the
+        // user pastes a Base64 image and jumps straight to Export without
+        // clicking Decode first. Before the fix, `open_export_image_dialog`
+        // errored because `image_bytes`/`image_meta` were None.
+        let mut app = Basie64App::default();
+        let ctx = egui::Context::default();
+        let png = tiny_png_bytes();
+        app.input = general_purpose::STANDARD.encode(&png);
+
+        assert!(app.image_bytes.is_none());
+        assert!(app.image_meta.is_none());
+        assert!(app.export_image_dialog.is_none());
+
+        app.open_export_image_dialog(&ctx);
+
+        assert!(
+            app.export_image_dialog.is_some(),
+            "dialog should open after eager decode"
+        );
+        assert!(
+            app.image_bytes.is_some(),
+            "raw image bytes should now be cached"
+        );
+        assert!(app.image_meta.is_some(), "metadata should now be populated");
+        assert!(app.error.is_none(), "no error banner expected");
+    }
+
+    #[test]
+    fn open_export_image_dialog_rejects_non_image_input() {
+        let mut app = Basie64App::default();
+        let ctx = egui::Context::default();
+        app.input = "SGVsbG8sIHdvcmxkIQ==".into(); // valid base64, not an image
+
+        app.open_export_image_dialog(&ctx);
+
+        assert!(
+            app.export_image_dialog.is_none(),
+            "dialog must not open for non-image input"
+        );
+        assert!(app.image_bytes.is_none());
+        assert!(
+            app.error.as_ref().is_some_and(|e| e.contains("image")),
+            "error banner should explain the problem"
+        );
+    }
+
+    #[test]
+    fn open_export_image_dialog_reuses_cached_image_without_redecoding() {
+        // If image state is already populated (e.g. after Decode), opening
+        // the dialog should not touch self.input or re-run the decode.
+        let mut app = Basie64App::default();
+        let ctx = egui::Context::default();
+        let png = tiny_png_bytes();
+        app.input = general_purpose::STANDARD.encode(&png);
+        app.decode_input_str(&ctx, &app.input.clone());
+        assert!(app.image_bytes.is_some());
+
+        // Now stomp the input — cached state should still drive the dialog.
+        app.input = "garbage not base64".into();
+        app.open_export_image_dialog(&ctx);
+
+        assert!(app.export_image_dialog.is_some());
+        assert!(app.error.is_none());
     }
 
     #[test]
