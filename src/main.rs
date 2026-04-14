@@ -32,6 +32,7 @@ fn main() -> eframe::Result {
         native_options,
         Box::new(|cc| {
             let app = Basie64App::default();
+            theme::install_fonts(&cc.egui_ctx);
             theme::apply(&cc.egui_ctx, app.settings.theme);
             Ok(Box::new(app))
         }),
