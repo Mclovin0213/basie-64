@@ -4,6 +4,8 @@ Offline-first Base64 encoder/decoder built in Rust + egui (eframe), shipped as b
 
 **Active roadmap:** `POLISH_PLAN.md`. Phase 2 ("Power User") is shipped — including the richer image flow (EXIF extraction, metadata bar, Export Image dialog with lossless metadata stripping). Phase 3+ (code-quality audit, branding, packaging, distribution, launch) is still pending.
 
+**Pencil redesign (separate track):** Phase 1 — design-token foundation — has landed on `feature/design-tokens`: `src/theme.rs` is rewritten around a `Tokens` struct mirroring every variable from `basie_64.pen`, `src/ui/widgets.rs` holds shared button / card / banner / chip helpers, and `assets/fonts/` embeds Inter + IBM Plex Mono + Lucide. Phases 2-7 (per-screen migrations) are pending. See `PENCIL_REDESIGN_PLAN.md` at the repo root for the full plan and the per-screen migration table.
+
 ---
 
 ## Module map
@@ -14,7 +16,7 @@ src/
 ├── lib.rs               Library root — exposes core/ so the CLI and tests can link.
 ├── cli.rs               CLI entry: clap subcommands (encode/decode/convert/detect/diff/hash), stdin + file I/O.
 ├── app.rs               Basie64App state + eframe::App::update dispatcher. Keyboard shortcuts, drag-drop, feature toggles.
-├── theme.rs             Theme enum (Light/Dark/System), palette application, icon loading.
+├── theme.rs             Theme enum (Light/Dark/System), `Tokens` struct (the Pencil palette), `apply()` which builds egui::Visuals from tokens, `install_fonts()` embedding Inter / IBM Plex Mono / Lucide via `include_bytes!`, and `pub mod icons` exposing Lucide PUA codepoints.
 ├── settings.rs          Persisted prefs (theme, private_mode, recent files) — TOML in OS config dir via `directories`.
 ├── samples.rs           Hard-coded sample payloads (JWT, PNG data URI, JSON) for the Samples menu.
 ├── decode.rs            Thin app-level wrapper: calls core::decode and mutates Basie64App state (output, jwt_inspection, image_preview, image_meta, error, history).
@@ -34,6 +36,7 @@ src/
 │   └── command_registry.rs  Static Command list (id, name, keywords, shortcut) + filter_commands fuzzy search for the palette.
 └── ui/                  egui widgets. Imports core/ for logic and reads/writes Basie64App state directly.
     ├── mod.rs
+    ├── widgets.rs       Shared design-system helpers consumed by every screen migration: `primary/secondary/ghost_button`, `icon_button` (with `active` toggle state), `card_frame`/`input_frame`/`glass_panel`, `divider`, `accent_banner`, `key_chip`, `meta_chip`, `section_header`. Pure — reads tokens off `ui.visuals().dark_mode`, never mutates `Basie64App`.
     ├── top_bar.rs       Draggable titlebar, theme toggle, settings menu (private-mode toggle), history-panel toggle, close button.
     ├── input.rs         Input text area, empty-state hint, samples menu, large-paste guard.
     ├── buttons.rs       Action row: Encode / Decode / Diff / Save as File / Clear + batch folder/file dialogs.
@@ -44,6 +47,9 @@ src/
     ├── batch_panel.rs   Bottom panel: batch preview, confirmation, progress, results table.
     ├── diff_view.rs     Full-screen diff mode: side-by-side text/binary comparison + summary stats.
     └── command_palette.rs  Cmd+K overlay: fuzzy search, arrow/enter/escape, dispatches to Basie64App methods.
+
+assets/
+└── fonts/               TTFs embedded via `include_bytes!` in `theme::install_fonts`: Inter Regular/SemiBold (rsms/inter v4.1, OFL), IBM Plex Mono Regular (IBM/plex-mono@1.1.0, OFL), Lucide icon font (lucide 1.8.0, ISC) + `lucide-codepoints.json`. License files and provenance README live alongside.
 ```
 
 `Basie64App` fields are `pub(crate)` — UI modules take `&mut Basie64App` and read/write directly. No event bus, no `Rc<RefCell>`.
@@ -77,7 +83,10 @@ cargo clippy --all-targets -- -D warnings    # lint (must be clean)
 
 | Want to change... | Edit |
 |---|---|
-| Color palette / spacing | `src/theme.rs` |
+| Color palette / spacing (design tokens) | `src/theme.rs` (`Tokens::dark()` / `Tokens::light()`) |
+| Shared button / card / banner widgets | `src/ui/widgets.rs` |
+| Embedded fonts (Inter, IBM Plex Mono, Lucide) | `assets/fonts/` + `theme::install_fonts` |
+| Lucide icon glyph constants | `src/theme.rs` (`pub mod icons`) |
 | A keyboard shortcut | `src/app.rs` (`update` → `ctx.input`) |
 | Button row layout | `src/ui/buttons.rs` |
 | Sample payloads menu | `src/samples.rs` + `src/ui/input.rs` |
