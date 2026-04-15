@@ -8,8 +8,6 @@ pub struct Settings {
     #[serde(default)]
     pub theme: Theme,
     #[serde(default)]
-    pub shortcut_hint_dismissed: bool,
-    #[serde(default)]
     pub recent_files: Vec<PathBuf>,
     /// When true, no history entries are recorded.
     #[serde(default)]
