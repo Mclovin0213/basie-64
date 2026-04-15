@@ -65,6 +65,9 @@ pub struct Basie64App {
     pub(crate) history_store: HistoryStore,
     /// Whether the history panel is currently visible.
     pub(crate) show_history_panel: bool,
+    /// Tracks whether the last triggered action was Encode (true) or Decode (false).
+    /// Drives the primary/secondary button swap in the action row.
+    pub(crate) last_action_was_encode: bool,
     /// Search query for the history panel.
     pub(crate) history_query: String,
     /// Currently selected history entry id.
@@ -151,6 +154,7 @@ impl Default for Basie64App {
             large_paste_confirmed: false,
             history_store: HistoryStore::load(history_path().unwrap_or_default(), private_mode),
             show_history_panel: false,
+            last_action_was_encode: true,
             history_query: String::new(),
             selected_history_entry: None,
             show_diff_view: false,
@@ -394,6 +398,7 @@ impl Basie64App {
         self.encoded_data_uri = Some(format!("data:text/plain;base64,{}", self.output));
         self.jwt_inspection = None;
         self.jwt_verification = None;
+        self.last_action_was_encode = true;
     }
 
     /// Convert the current input from its detected format to `self.convert_target`.
@@ -628,6 +633,7 @@ impl Basie64App {
         let b64 = self.input.clone();
         self.decode_input_str(ctx, &b64);
         self.large_paste_confirmed = false;
+        self.last_action_was_encode = false;
     }
 
     pub fn is_batch_running(&self) -> bool {
