@@ -1,17 +1,15 @@
-//! Export Image modal dialog. Opened by the metadata bar's Export button or
-//! the Cmd+K command palette. Shows a short readout of the decoded image
-//! and an optional checkbox to strip metadata losslessly before saving.
+//! Export Image modal dialog — reskinned to Pencil Phase 6 design tokens.
 
 use crate::app::Basie64App;
-use eframe::egui;
+use crate::theme::{icons, Tokens};
+use crate::ui::widgets;
+use eframe::egui::{self, CornerRadius, Frame, Margin, Stroke};
 
 pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
     let Some(dialog) = app.export_image_dialog.clone() else {
         return;
     };
     let Some(meta) = app.image_meta.clone() else {
-        // Defensive: the open_export_image_dialog guard should prevent this,
-        // but if state somehow drifts, close rather than panic.
         app.close_export_image_dialog();
         return;
     };
@@ -22,19 +20,17 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
     let mut new_expanded = dialog.exif_expanded;
 
     let screen_rect = ctx.screen_rect();
+    let t = Tokens::for_theme(app.settings.theme);
 
-    // Full-screen backdrop that *eats* pointer events so clicks can't fall
-    // through to the main UI while the dialog is open. `Order::Foreground`
-    // puts it above the main panels; the dialog itself lives one layer
-    // higher at `Order::Tooltip` so its buttons still receive input.
+    // Full-screen backdrop
     let backdrop_clicked = egui::Area::new("export_image_dialog_backdrop".into())
         .fixed_pos(screen_rect.min)
         .order(egui::Order::Foreground)
         .interactable(true)
         .show(ctx, |ui| {
-            let response = ui.allocate_response(screen_rect.size(), egui::Sense::click_and_drag());
-            ui.painter()
-                .rect_filled(screen_rect, 0.0, egui::Color32::from_black_alpha(160));
+            let response =
+                ui.allocate_response(screen_rect.size(), egui::Sense::click_and_drag());
+            ui.painter().rect_filled(screen_rect, 0.0, t.modal_backdrop);
             response.clicked()
         })
         .inner;
@@ -47,129 +43,200 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
         .order(egui::Order::Tooltip)
         .show(ctx, |ui| {
-            egui::Frame::window(ui.style()).show(ui, |ui| {
-                ui.set_min_width(420.0);
-                ui.set_max_width(520.0);
-                ui.vertical(|ui| {
-                    ui.heading("Export Image");
-                    ui.add_space(8.0);
-
-                    ui.label(
-                        egui::RichText::new(format!(
-                            "{} · {}×{} · {}",
-                            meta.kind.label(),
-                            meta.width,
-                            meta.height,
-                            humanize_size(meta.size_bytes),
-                        ))
-                        .monospace(),
-                    );
-
-                    ui.add_space(6.0);
-
-                    let warn_color = egui::Color32::from_rgb(0xE0, 0x9F, 0x3E);
-                    if !meta.exif.is_empty() {
-                        ui.label(
-                            egui::RichText::new(format!(
-                                "⚠ {} EXIF {} detected",
-                                meta.exif.len(),
-                                if meta.exif.len() == 1 {
-                                    "field"
-                                } else {
-                                    "fields"
-                                },
-                            ))
-                            .color(warn_color),
-                        );
-
-                        let expanded_label = if new_expanded {
-                            "▾ hide fields"
-                        } else {
-                            "▸ show fields"
-                        };
-                        if ui.button(expanded_label).clicked() {
-                            new_expanded = !new_expanded;
-                        }
-
-                        if new_expanded {
-                            egui::ScrollArea::vertical()
-                                .id_salt("export_image_exif_list")
-                                .max_height(180.0)
-                                .show(ui, |ui| {
-                                    egui::Grid::new("export_image_exif_grid")
-                                        .num_columns(2)
-                                        .spacing([12.0, 2.0])
-                                        .striped(true)
-                                        .show(ui, |ui| {
-                                            for field in &meta.exif {
-                                                ui.label(
-                                                    egui::RichText::new(&field.tag)
-                                                        .monospace()
-                                                        .small(),
-                                                );
-                                                ui.label(
-                                                    egui::RichText::new(&field.value)
-                                                        .monospace()
-                                                        .small(),
-                                                );
-                                                ui.end_row();
+            Frame::new()
+                .fill(t.modal_surface)
+                .stroke(Stroke::new(1.0, t.border_default))
+                .corner_radius(CornerRadius::same(12))
+                .inner_margin(Margin::same(0))
+                .shadow(egui::epaint::Shadow {
+                    offset: [0, 8],
+                    blur: 40,
+                    spread: 0,
+                    color: egui::Color32::from_black_alpha(85),
+                })
+                .show(ui, |ui| {
+                    ui.set_min_width(480.0);
+                    ui.set_max_width(600.0);
+                    ui.vertical(|ui| {
+                        // ── Header ────────────────────────────────────────
+                        Frame::new()
+                            .inner_margin(Margin::symmetric(20, 16))
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    ui.label(
+                                        egui::RichText::new("Export Image")
+                                            .font(egui::FontId::new(
+                                                15.0,
+                                                egui::FontFamily::Name("inter_semibold".into()),
+                                            ))
+                                            .color(t.text_primary),
+                                    );
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| {
+                                            if widgets::icon_button(ui, icons::X, "Close (Esc)", false)
+                                                .clicked()
+                                            {
+                                                should_cancel = true;
                                             }
-                                        });
+                                        },
+                                    );
                                 });
-                        }
-                    } else if meta.has_strippable_metadata {
-                        // Non-EXIF metadata present (e.g. PNG tEXt / JPEG XMP).
-                        // We don't have a field list to show, but the strip
-                        // pass will still scrub it.
-                        ui.label(
-                            egui::RichText::new(
-                                "⚠ Non-EXIF metadata present (text chunks / XMP / IPTC).",
-                            )
-                            .color(warn_color),
-                        );
-                    } else {
-                        ui.label(egui::RichText::new("No metadata detected.").small().weak());
-                    }
+                            });
 
-                    ui.add_space(10.0);
-                    ui.separator();
-                    ui.add_space(8.0);
+                        widgets::divider(ui);
 
-                    let strip_enabled = meta.strip_supported && meta.has_strippable_metadata;
-                    ui.add_enabled_ui(strip_enabled, |ui| {
-                        ui.checkbox(&mut new_strip, "Strip metadata before saving");
-                    });
-                    ui.label(
-                        egui::RichText::new(strip_help_text(
-                            strip_enabled,
-                            meta.strip_supported,
-                            meta.kind.label(),
-                        ))
-                        .small()
-                        .weak(),
-                    );
+                        // ── Body ──────────────────────────────────────────
+                        Frame::new()
+                            .inner_margin(Margin::symmetric(20, 16))
+                            .show(ui, |ui| {
+                                ui.vertical(|ui| {
+                                    ui.spacing_mut().item_spacing.y = 12.0;
 
-                    ui.add_space(12.0);
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        if ui.button("Save…").clicked() {
-                            should_save = true;
-                        }
-                        if ui.button("Cancel").clicked() {
-                            should_cancel = true;
-                        }
+                                    // Image readout
+                                    widgets::input_frame(ui, |ui| {
+                                        let info = format!(
+                                            "{} · {}×{} · {}",
+                                            meta.kind.label(),
+                                            meta.width,
+                                            meta.height,
+                                            humanize_size(meta.size_bytes),
+                                        );
+                                        ui.label(
+                                            egui::RichText::new(info)
+                                                .font(egui::FontId::monospace(12.0))
+                                                .color(t.text_primary),
+                                        );
+                                    });
+
+                                    // Metadata section
+                                    if !meta.exif.is_empty() {
+                                        let expanded_label = if new_expanded {
+                                            "Hide EXIF fields"
+                                        } else {
+                                            "Show EXIF fields"
+                                        };
+                                        let exif_banner_resp = widgets::accent_banner(
+                                            ui,
+                                            widgets::AccentTone::Amber,
+                                            Some(icons::INFO),
+                                            &format!(
+                                                "{} EXIF {} detected",
+                                                meta.exif.len(),
+                                                if meta.exif.len() == 1 { "field" } else { "fields" }
+                                            ),
+                                            Some(expanded_label),
+                                        );
+                                        if exif_banner_resp.action_clicked {
+                                            new_expanded = !new_expanded;
+                                        }
+
+                                        if new_expanded {
+                                            egui::ScrollArea::vertical()
+                                                .id_salt("export_image_exif_list")
+                                                .max_height(180.0)
+                                                .show(ui, |ui| {
+                                                    egui::Grid::new("export_image_exif_grid")
+                                                        .num_columns(2)
+                                                        .spacing([12.0, 2.0])
+                                                        .striped(true)
+                                                        .show(ui, |ui| {
+                                                            for field in &meta.exif {
+                                                                ui.label(
+                                                                    egui::RichText::new(&field.tag)
+                                                                        .font(egui::FontId::monospace(11.0))
+                                                                        .color(t.text_secondary),
+                                                                );
+                                                                ui.label(
+                                                                    egui::RichText::new(&field.value)
+                                                                        .font(egui::FontId::monospace(11.0))
+                                                                        .color(t.text_primary),
+                                                                );
+                                                                ui.end_row();
+                                                            }
+                                                        });
+                                                });
+                                        }
+                                    } else if meta.has_strippable_metadata {
+                                        widgets::accent_banner(
+                                            ui,
+                                            widgets::AccentTone::Amber,
+                                            Some(icons::INFO),
+                                            "Non-EXIF metadata present (text chunks / XMP / IPTC).",
+                                            None,
+                                        );
+                                    } else {
+                                        ui.label(
+                                            egui::RichText::new("No metadata detected.")
+                                                .small()
+                                                .color(t.text_muted),
+                                        );
+                                    }
+
+                                    // Strip metadata checkbox
+                                    widgets::divider(ui);
+                                    let strip_enabled =
+                                        meta.strip_supported && meta.has_strippable_metadata;
+                                    ui.add_enabled_ui(strip_enabled, |ui| {
+                                        ui.checkbox(
+                                            &mut new_strip,
+                                            egui::RichText::new("Strip metadata before saving")
+                                                .color(t.text_primary),
+                                        );
+                                    });
+                                    ui.label(
+                                        egui::RichText::new(strip_help_text(
+                                            strip_enabled,
+                                            meta.strip_supported,
+                                            meta.kind.label(),
+                                        ))
+                                        .small()
+                                        .color(t.text_muted),
+                                    );
+                                });
+                            });
+
+                        widgets::divider(ui);
+
+                        // ── Footer ────────────────────────────────────────
+                        Frame::new()
+                            .inner_margin(Margin::symmetric(20, 12))
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    widgets::key_chip(ui, "Esc", "close", false);
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| {
+                                            ui.spacing_mut().item_spacing.x = 8.0;
+                                            if widgets::primary_button(
+                                                ui,
+                                                "Save…",
+                                                Some(icons::DOWNLOAD),
+                                            )
+                                            .clicked()
+                                            {
+                                                should_save = true;
+                                            }
+                                            if widgets::secondary_button(ui, "Cancel", None)
+                                                .clicked()
+                                            {
+                                                should_cancel = true;
+                                            }
+                                        },
+                                    );
+                                });
+                            });
                     });
                 });
-            });
         });
 
-    // Escape closes the dialog.
     if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
         should_cancel = true;
     }
 
-    // Write back any local changes before acting.
     if let Some(existing) = app.export_image_dialog.as_mut() {
-        existing.strip_metadata = new_strip && meta.strip_supported && meta.has_strippable_metadata;
+        existing.strip_metadata =
+            new_strip && meta.strip_supported && meta.has_strippable_metadata;
         existing.exif_expanded = new_expanded;
     }
 
