@@ -12,14 +12,6 @@ pub enum Theme {
 }
 
 impl Theme {
-    pub fn label(self) -> &'static str {
-        match self {
-            Theme::Light => "☀ Light",
-            Theme::Dark => "🌙 Dark",
-            Theme::System => "🖥 System",
-        }
-    }
-
     pub fn next(self) -> Self {
         match self {
             Theme::Light => Theme::Dark,
@@ -292,10 +284,6 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
     style.spacing.window_margin = egui::Margin::same(16);
     style.spacing.menu_margin = egui::Margin::same(8);
     ctx.set_style(style);
-}
-
-pub fn top_bar_fill(theme: Theme) -> egui::Color32 {
-    Tokens::for_theme(theme).bg_surface
 }
 
 /// Embed the design-system fonts (Inter, IBM Plex Mono, Lucide) into egui so

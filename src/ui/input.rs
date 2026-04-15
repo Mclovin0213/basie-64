@@ -30,20 +30,6 @@ pub fn show(app: &mut Basie64App, ui: &mut egui::Ui) {
                             .weak()
                             .italics(),
                     );
-                    if !app.settings.shortcut_hint_dismissed {
-                        ui.add_space(4.0);
-                        ui.horizontal(|ui| {
-                            ui.label(
-                                egui::RichText::new("⌘↵ decode  ·  ⌘⇧C copy  ·  Esc clear")
-                                    .small()
-                                    .weak(),
-                            );
-                            if ui.small_button("Got it").clicked() {
-                                app.settings.shortcut_hint_dismissed = true;
-                                app.settings.save();
-                            }
-                        });
-                    }
                     ui.add_space(8.0);
                 });
             }

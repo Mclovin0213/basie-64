@@ -356,23 +356,35 @@ pub fn accent_banner(
 /// Keyboard shortcut pill used in the bottom hint row.
 ///
 /// Rendered as `[key]  label` where the key chip has a soft background and the
-/// label sits in muted text.
-pub fn key_chip(ui: &mut Ui, key: &str, label: &str) {
+/// label sits in muted text. When `active` is true the pill flips into the
+/// accent-blue "selected" style — used on the ⌘H chip while the history panel
+/// is open.
+pub fn key_chip(ui: &mut Ui, key: &str, label: &str, active: bool) {
     let t = tokens(ui);
+    let (key_fill, key_border, key_text, label_color) = if active {
+        (
+            t.accent_blue_dim,
+            t.accent_blue,
+            t.accent_blue,
+            t.accent_blue,
+        )
+    } else {
+        (t.bg_elevated, t.border_subtle, t.text_mono, t.text_muted)
+    };
     ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 4.0;
         Frame::new()
-            .fill(t.bg_elevated)
-            .stroke(Stroke::new(1.0, t.border_subtle))
+            .fill(key_fill)
+            .stroke(Stroke::new(1.0, key_border))
             .corner_radius(CornerRadius::same(4))
             .inner_margin(Margin::symmetric(6, 2))
             .show(ui, |ui| {
-                ui.label(RichText::new(key).font(mono_font(11.0)).color(t.text_mono));
+                ui.label(RichText::new(key).font(mono_font(11.0)).color(key_text));
             });
-        ui.add_space(4.0);
         ui.label(
             RichText::new(label)
                 .font(FontId::new(11.0, FontFamily::Proportional))
-                .color(t.text_muted),
+                .color(label_color),
         );
     });
 }
