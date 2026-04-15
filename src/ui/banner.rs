@@ -78,11 +78,7 @@ pub fn show_convert_hint(app: &mut Basie64App, _ctx: &egui::Context, ui: &mut eg
                             if fmt == detected {
                                 continue;
                             }
-                            ui.selectable_value(
-                                &mut app.convert_target,
-                                fmt,
-                                format!("{}", fmt),
-                            );
+                            ui.selectable_value(&mut app.convert_target, fmt, format!("{}", fmt));
                         }
                     });
                 if ui
@@ -90,8 +86,7 @@ pub fn show_convert_hint(app: &mut Basie64App, _ctx: &egui::Context, ui: &mut eg
                     .clicked()
                 {
                     let input_snapshot = app.input.trim().to_string();
-                    let variant_label =
-                        format!("{} → {}", detected, app.convert_target);
+                    let variant_label = format!("{} → {}", detected, app.convert_target);
                     app.run_convert();
                     if app.error.is_none() {
                         app.history_store.append(HistoryEntry::new(

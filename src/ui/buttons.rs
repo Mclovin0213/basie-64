@@ -65,10 +65,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
             let batch_enabled = !app.is_batch_running();
 
             if ui
-                .add_enabled(
-                    batch_enabled,
-                    egui::Button::new("Batch Decode Files…"),
-                )
+                .add_enabled(batch_enabled, egui::Button::new("Batch Decode Files…"))
                 .on_hover_text("Select multiple .b64 files to batch decode")
                 .clicked()
             {
@@ -78,10 +75,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
             }
 
             if ui
-                .add_enabled(
-                    batch_enabled,
-                    egui::Button::new("Batch Encode Files…"),
-                )
+                .add_enabled(batch_enabled, egui::Button::new("Batch Encode Files…"))
                 .on_hover_text("Select multiple files to batch encode")
                 .clicked()
             {
@@ -91,10 +85,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
             }
 
             if ui
-                .add_enabled(
-                    batch_enabled,
-                    egui::Button::new("Batch Decode Folder…"),
-                )
+                .add_enabled(batch_enabled, egui::Button::new("Batch Decode Folder…"))
                 .on_hover_text("Select a folder to batch decode .b64 files")
                 .clicked()
             {
@@ -104,10 +95,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
             }
 
             if ui
-                .add_enabled(
-                    batch_enabled,
-                    egui::Button::new("Batch Encode Folder…"),
-                )
+                .add_enabled(batch_enabled, egui::Button::new("Batch Encode Folder…"))
                 .on_hover_text("Select a folder to batch encode all files")
                 .clicked()
             {
@@ -122,8 +110,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context, ui: &mut egui::Ui) {
 fn vertical_divider(ui: &mut egui::Ui) {
     let t = widgets::tokens(ui);
     let (rect, _) = ui.allocate_exact_size(egui::Vec2::new(1.0, 20.0), Sense::hover());
-    ui.painter_at(rect)
-        .rect_filled(rect, 0.0, t.border_subtle);
+    ui.painter_at(rect).rect_filled(rect, 0.0, t.border_subtle);
     // breathing room either side
     let _ = ui.allocate_exact_size(egui::Vec2::new(2.0, 1.0), Sense::hover());
 }

@@ -10,8 +10,7 @@ pub fn show(app: &mut Basie64App, ui: &mut egui::Ui) {
             ui.horizontal(|ui| {
                 widgets::section_header(ui, "Input");
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    let samples_btn =
-                        widgets::ghost_button(ui, "Samples", Some(icons::PACKAGE));
+                    let samples_btn = widgets::ghost_button(ui, "Samples", Some(icons::PACKAGE));
                     let popup_id = ui.make_persistent_id("samples_menu");
                     if samples_btn.clicked() {
                         ui.memory_mut(|m| m.toggle_popup(popup_id));
@@ -41,9 +40,7 @@ pub fn show(app: &mut Basie64App, ui: &mut egui::Ui) {
                     let t = widgets::tokens(ui);
                     ui.add(
                         egui::TextEdit::multiline(&mut app.input)
-                            .hint_text(
-                                "Paste or type content here… (⌘+Enter to encode/decode)",
-                            )
+                            .hint_text("Paste or type content here… (⌘+Enter to encode/decode)")
                             .desired_width(f32::INFINITY)
                             .desired_rows(6)
                             .text_color(t.text_primary)

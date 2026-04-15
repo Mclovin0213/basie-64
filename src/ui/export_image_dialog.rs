@@ -28,8 +28,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
         .order(egui::Order::Foreground)
         .interactable(true)
         .show(ctx, |ui| {
-            let response =
-                ui.allocate_response(screen_rect.size(), egui::Sense::click_and_drag());
+            let response = ui.allocate_response(screen_rect.size(), egui::Sense::click_and_drag());
             ui.painter().rect_filled(screen_rect, 0.0, t.modal_backdrop);
             response.clicked()
         })
@@ -74,8 +73,13 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                                     ui.with_layout(
                                         egui::Layout::right_to_left(egui::Align::Center),
                                         |ui| {
-                                            if widgets::icon_button(ui, icons::X, "Close (Esc)", false)
-                                                .clicked()
+                                            if widgets::icon_button(
+                                                ui,
+                                                icons::X,
+                                                "Close (Esc)",
+                                                false,
+                                            )
+                                            .clicked()
                                             {
                                                 should_cancel = true;
                                             }
@@ -123,7 +127,11 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                                             &format!(
                                                 "{} EXIF {} detected",
                                                 meta.exif.len(),
-                                                if meta.exif.len() == 1 { "field" } else { "fields" }
+                                                if meta.exif.len() == 1 {
+                                                    "field"
+                                                } else {
+                                                    "fields"
+                                                }
                                             ),
                                             Some(expanded_label),
                                         );
@@ -144,13 +152,21 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                                                             for field in &meta.exif {
                                                                 ui.label(
                                                                     egui::RichText::new(&field.tag)
-                                                                        .font(egui::FontId::monospace(11.0))
+                                                                        .font(
+                                                                            egui::FontId::monospace(
+                                                                                11.0,
+                                                                            ),
+                                                                        )
                                                                         .color(t.text_secondary),
                                                                 );
                                                                 ui.label(
-                                                                    egui::RichText::new(&field.value)
-                                                                        .font(egui::FontId::monospace(11.0))
-                                                                        .color(t.text_primary),
+                                                                    egui::RichText::new(
+                                                                        &field.value,
+                                                                    )
+                                                                    .font(egui::FontId::monospace(
+                                                                        11.0,
+                                                                    ))
+                                                                    .color(t.text_primary),
                                                                 );
                                                                 ui.end_row();
                                                             }
@@ -235,8 +251,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
     }
 
     if let Some(existing) = app.export_image_dialog.as_mut() {
-        existing.strip_metadata =
-            new_strip && meta.strip_supported && meta.has_strippable_metadata;
+        existing.strip_metadata = new_strip && meta.strip_supported && meta.has_strippable_metadata;
         existing.exif_expanded = new_expanded;
     }
 

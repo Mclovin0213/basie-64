@@ -147,7 +147,11 @@ mod image_meta_bar {
                         egui::RichText::new(format!(
                             "{} EXIF {}",
                             meta.exif.len(),
-                            if meta.exif.len() == 1 { "field" } else { "fields" }
+                            if meta.exif.len() == 1 {
+                                "field"
+                            } else {
+                                "fields"
+                            }
                         ))
                         .color(t3.accent_amber),
                     );
@@ -425,9 +429,7 @@ mod jwt_inspector {
                     format_relative(*in_secs)
                 )
             }
-            JwtWarning::MissingExp => {
-                "No `exp` claim — this token never expires".to_string()
-            }
+            JwtWarning::MissingExp => "No `exp` claim — this token never expires".to_string(),
             JwtWarning::MalformedTimestamp { claim } => {
                 format!("`{claim}` is not a valid integer timestamp")
             }
@@ -503,9 +505,10 @@ mod jwt_inspector {
                      HMAC verification covers HS256, HS384, and HS512."
                 ),
             ),
-            VerificationResult::InvalidSignatureEncoding => {
-                (AccentTone::Red, "Signature is not valid base64url".to_string())
-            }
+            VerificationResult::InvalidSignatureEncoding => (
+                AccentTone::Red,
+                "Signature is not valid base64url".to_string(),
+            ),
             VerificationResult::EmptySecret => (
                 AccentTone::Amber,
                 "Enter a secret to verify the signature".to_string(),

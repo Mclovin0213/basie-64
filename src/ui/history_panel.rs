@@ -53,21 +53,13 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                             app.history_store.clear();
                             app.ensure_selected_history_entry();
                         }
-                        ui.with_layout(
-                            egui::Layout::right_to_left(egui::Align::Center),
-                            |ui| {
-                                if widgets::icon_button(
-                                    ui,
-                                    icons::X,
-                                    "Close history (⌘H)",
-                                    false,
-                                )
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if widgets::icon_button(ui, icons::X, "Close history (⌘H)", false)
                                 .clicked()
-                                {
-                                    app.show_history_panel = false;
-                                }
-                            },
-                        );
+                            {
+                                app.show_history_panel = false;
+                            }
+                        });
                     });
 
                     ui.add_space(8.0);
@@ -112,14 +104,11 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                         .max_height(PANEL_HEIGHT - 140.0)
                         .show(ui, |ui| {
                             for entry_id in visible_ids {
-                                let Some(entry) =
-                                    app.history_store.get_by_id(&entry_id).cloned()
+                                let Some(entry) = app.history_store.get_by_id(&entry_id).cloned()
                                 else {
                                     continue;
                                 };
-                                let selected = app
-                                    .selected_history_entry
-                                    .as_deref()
+                                let selected = app.selected_history_entry.as_deref()
                                     == Some(entry.id.as_str());
 
                                 history_row(ui, app, ctx, &entry, selected);
@@ -137,7 +126,8 @@ fn drag_handle(ui: &mut egui::Ui) {
     let full_width = ui.available_width();
     let (row_rect, _) = ui.allocate_exact_size(egui::Vec2::new(full_width, 12.0), Sense::hover());
     let pill = egui::Rect::from_center_size(row_rect.center(), egui::Vec2::new(40.0, 4.0));
-    ui.painter().rect_filled(pill, CornerRadius::same(2), t.border_default);
+    ui.painter()
+        .rect_filled(pill, CornerRadius::same(2), t.border_default);
 }
 
 fn history_row(
@@ -148,7 +138,11 @@ fn history_row(
     selected: bool,
 ) {
     let t = widgets::tokens(ui);
-    let fill = if selected { t.accent_blue_dim } else { egui::Color32::TRANSPARENT };
+    let fill = if selected {
+        t.accent_blue_dim
+    } else {
+        egui::Color32::TRANSPARENT
+    };
 
     let mut frame = Frame::new()
         .fill(fill)
