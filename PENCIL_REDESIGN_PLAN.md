@@ -134,13 +134,13 @@ src/settings.rs                       drop shortcut_hint_dismissed (no longer ne
 ## Phasing (for execution after this plan is approved)
 
 1. **Foundation** — ✅ *shipped on `feature/design-tokens`*. `theme.rs` rewritten around `Tokens` (dark verbatim from the Pencil file, light derived and marked provisional), fonts dropped in `assets/fonts/`, `widgets.rs` added with the helpers listed above, `install_fonts` wired from `main.rs`. Verified: `cargo clippy --all-targets -- -D warnings` clean, `cargo test` 25/25, `basie encode "Hello" → SGVsbG8=`, GUI launches with the old layout drawn through the new token pipeline.
-2. **Top bar + status footer** — migrate `top_bar.rs`, add the bottom hint panel via `app.rs`. Verify visually against `Bahcc` screenshot.
-3. **Input / buttons / output** — migrate the central column. Verify against `Bahcc`.
-4. **Banners + JWT inspector** — migrate `banner.rs` and `output.rs::jwt_inspector`. Verify against `UBM2M`.
-5. **Image meta bar** — restructure `output.rs::image_meta_bar`. Verify against `HQrj9`.
-6. **Export modal** — reskin `export_image_dialog.rs`. Verify against `8FNcc`.
-7. **History overlay** — convert `history_panel.rs` to `Area` glass overlay. Verify against `srORL`.
-8. **Sweep** — `cargo fmt`, `cargo clippy --all-targets -- -D warnings`, `cargo test`, `cargo run --bin basie -- encode "test"` to confirm CLI still links.
+2. **Top bar + status footer** — ✅ *shipped on `feature/design-tokens` migrate `top_bar.rs`, add the bottom hint panel via `app.rs`. Verify visually against `Bahcc` screenshot.
+3. **Input / buttons / output** — ✅ *shipped on `feature/pencil-phase2-topbar-footer`*. `input.rs` wrapped in `input_frame`, `buttons.rs` rebuilt with token helpers + primary/secondary flip, `output.rs` top-level wrapped in `input_frame` with token copy buttons.
+4. **Banners + JWT inspector** — ✅ *shipped on `feature/pencil-phase2-topbar-footer`*. `banner.rs` uses `accent_banner` for all 4 banner types; `jwt_inspector` rebuilt as `card_frame` with `section_header`s, `divider`s, and `accent_banner` warnings.
+5. **Image meta bar** — ✅ *shipped on `feature/pencil-phase2-topbar-footer`*. Restructured into preview frame + meta row + EXIF `card_frame`.
+6. **Export modal** — ✅ *shipped on `feature/pencil-phase2-topbar-footer`*. Reskinned with `modal_surface`, `border_default`, radius 12, shadow, header with `icon_button(X)`, `key_chip` footer.
+7. **History overlay** — ✅ *shipped on `feature/pencil-phase2-topbar-footer`*. `TopBottomPanel::bottom` replaced with `egui::Area` glass overlay anchored above the status footer.
+8. **Sweep** — ✅ *shipped on `feature/pencil-phase2-topbar-footer`*. `cargo fmt` + `cargo clippy --all-targets -- -D warnings` clean, `cargo test` 152/152, `basie encode "test" → dGVzdA==`.
 
 Each phase ends with a screenshot of the running app placed next to the corresponding Pencil frame for visual diff.
 
