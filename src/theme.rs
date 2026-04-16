@@ -1,4 +1,5 @@
 use eframe::egui;
+use egui::epaint::Shadow;
 use image::GenericImageView;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::PathBuf, sync::Arc};
@@ -88,6 +89,11 @@ pub struct Tokens {
     pub modal_backdrop: egui::Color32,
     pub modal_surface: egui::Color32,
     pub panel_glass: egui::Color32,
+    pub overlay_surface: egui::Color32,
+
+    pub shadow_sm: Shadow,
+    pub shadow_lg: Shadow,
+    pub shadow_up: Shadow,
 }
 
 impl Tokens {
@@ -132,7 +138,27 @@ impl Tokens {
             history_bg: C::from_rgba_unmultiplied(0x11, 0x13, 0x18, 0xCC),
             modal_backdrop: C::from_rgba_unmultiplied(0x0D, 0x0F, 0x12, 0x99),
             modal_surface: C::from_rgb(0x1A, 0x1D, 0x24),
-            panel_glass: C::from_rgba_unmultiplied(0x14, 0x16, 0x1B, 0xDD),
+            panel_glass: C::from_rgba_unmultiplied(0x14, 0x16, 0x1B, 0xEB),
+            overlay_surface: C::from_rgba_unmultiplied(0x1A, 0x1D, 0x24, 0xF0),
+
+            shadow_sm: Shadow {
+                offset: [0, 1],
+                blur: 3,
+                spread: 0,
+                color: C::from_black_alpha(64),
+            },
+            shadow_lg: Shadow {
+                offset: [0, 4],
+                blur: 16,
+                spread: 0,
+                color: C::from_black_alpha(89),
+            },
+            shadow_up: Shadow {
+                offset: [0, -1],
+                blur: 3,
+                spread: 0,
+                color: C::from_black_alpha(64),
+            },
         }
     }
 
@@ -180,7 +206,27 @@ impl Tokens {
             history_bg: C::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 0xCC),
             modal_backdrop: C::from_rgba_unmultiplied(0x0D, 0x0F, 0x12, 0x66),
             modal_surface: C::from_rgb(0xFF, 0xFF, 0xFF),
-            panel_glass: C::from_rgba_unmultiplied(0xEF, 0xF1, 0xF4, 0xDD),
+            panel_glass: C::from_rgba_unmultiplied(0xEF, 0xF1, 0xF4, 0xEB),
+            overlay_surface: C::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 0xF0),
+
+            shadow_sm: Shadow {
+                offset: [0, 1],
+                blur: 3,
+                spread: 0,
+                color: C::from_black_alpha(25),
+            },
+            shadow_lg: Shadow {
+                offset: [0, 4],
+                blur: 16,
+                spread: 0,
+                color: C::from_black_alpha(40),
+            },
+            shadow_up: Shadow {
+                offset: [0, -1],
+                blur: 3,
+                spread: 0,
+                color: C::from_black_alpha(25),
+            },
         }
     }
 
@@ -231,30 +277,30 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
 
     visuals.panel_fill = tokens.bg_base;
     visuals.window_fill = tokens.modal_surface;
-    visuals.window_stroke = egui::Stroke::new(1.0, tokens.border_default);
+    visuals.window_stroke = egui::Stroke::NONE;
     visuals.window_corner_radius = egui::CornerRadius::same(12);
     visuals.menu_corner_radius = egui::CornerRadius::same(8);
     visuals.extreme_bg_color = tokens.bg_input;
     visuals.faint_bg_color = tokens.bg_elevated;
     visuals.code_bg_color = tokens.bg_input;
     visuals.override_text_color = Some(tokens.text_primary);
-    visuals.window_shadow = egui::epaint::Shadow::NONE;
+    visuals.window_shadow = tokens.shadow_sm;
 
     visuals.widgets.noninteractive.bg_fill = tokens.bg_card;
     visuals.widgets.noninteractive.weak_bg_fill = tokens.bg_card;
-    visuals.widgets.noninteractive.bg_stroke = egui::Stroke::new(1.0, tokens.border_subtle);
+    visuals.widgets.noninteractive.bg_stroke = egui::Stroke::NONE;
     visuals.widgets.noninteractive.fg_stroke = egui::Stroke::new(1.0, tokens.text_secondary);
     visuals.widgets.noninteractive.corner_radius = egui::CornerRadius::same(8);
 
     visuals.widgets.inactive.bg_fill = tokens.bg_input;
     visuals.widgets.inactive.weak_bg_fill = tokens.bg_input;
-    visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, tokens.border_subtle);
+    visuals.widgets.inactive.bg_stroke = egui::Stroke::NONE;
     visuals.widgets.inactive.fg_stroke = egui::Stroke::new(1.0, tokens.text_primary);
     visuals.widgets.inactive.corner_radius = egui::CornerRadius::same(6);
 
     visuals.widgets.hovered.bg_fill = tokens.bg_hover;
     visuals.widgets.hovered.weak_bg_fill = tokens.bg_hover;
-    visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, tokens.border_default);
+    visuals.widgets.hovered.bg_stroke = egui::Stroke::NONE;
     visuals.widgets.hovered.fg_stroke = egui::Stroke::new(1.0, tokens.text_primary);
     visuals.widgets.hovered.corner_radius = egui::CornerRadius::same(6);
 
@@ -266,7 +312,7 @@ pub fn apply(ctx: &egui::Context, theme: Theme) {
 
     visuals.widgets.open.bg_fill = tokens.bg_hover;
     visuals.widgets.open.weak_bg_fill = tokens.bg_hover;
-    visuals.widgets.open.bg_stroke = egui::Stroke::new(1.0, tokens.border_default);
+    visuals.widgets.open.bg_stroke = egui::Stroke::NONE;
     visuals.widgets.open.fg_stroke = egui::Stroke::new(1.0, tokens.text_primary);
     visuals.widgets.open.corner_radius = egui::CornerRadius::same(6);
 

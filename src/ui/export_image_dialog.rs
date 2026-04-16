@@ -3,7 +3,7 @@
 use crate::app::Basie64App;
 use crate::theme::{icons, Tokens};
 use crate::ui::widgets;
-use eframe::egui::{self, CornerRadius, Frame, Margin, Stroke};
+use eframe::egui::{self, CornerRadius, Frame, Margin};
 
 pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
     let Some(dialog) = app.export_image_dialog.clone() else {
@@ -43,16 +43,10 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
         .order(egui::Order::Tooltip)
         .show(ctx, |ui| {
             Frame::new()
-                .fill(t.modal_surface)
-                .stroke(Stroke::new(1.0, t.border_default))
+                .fill(t.overlay_surface)
                 .corner_radius(CornerRadius::same(12))
                 .inner_margin(Margin::same(0))
-                .shadow(egui::epaint::Shadow {
-                    offset: [0, 8],
-                    blur: 40,
-                    spread: 0,
-                    color: egui::Color32::from_black_alpha(85),
-                })
+                .shadow(t.shadow_lg)
                 .show(ui, |ui| {
                     ui.set_min_width(480.0);
                     ui.set_max_width(600.0);

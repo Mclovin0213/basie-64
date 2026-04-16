@@ -965,12 +965,13 @@ impl eframe::App for Basie64App {
 }
 
 /// Persistent 32px bottom panel that surfaces the main keyboard shortcuts.
-/// Renders `bg_surface` with a 1px top border to match the Pencil design.
+/// Renders `bg_surface` with an upward shadow for Arc-style floating depth.
 fn show_status_footer(app: &Basie64App, ctx: &egui::Context) {
     let tokens = crate::theme::Tokens::for_theme(app.settings.theme);
 
     let frame = egui::Frame::new()
         .fill(tokens.bg_surface)
+        .shadow(tokens.shadow_up)
         .inner_margin(egui::Margin {
             left: 16,
             right: 16,
@@ -978,7 +979,7 @@ fn show_status_footer(app: &Basie64App, ctx: &egui::Context) {
             bottom: 0,
         });
 
-    let panel = egui::TopBottomPanel::bottom("status_footer")
+    egui::TopBottomPanel::bottom("status_footer")
         .frame(frame)
         .exact_height(32.0)
         .resizable(false)
@@ -992,17 +993,6 @@ fn show_status_footer(app: &Basie64App, ctx: &egui::Context) {
                 ui::widgets::key_chip(ui, "⌘H", "history", app.show_history_panel);
             });
         });
-
-    let rect = panel.response.rect;
-    let painter = ctx.layer_painter(egui::LayerId::new(
-        egui::Order::Foreground,
-        egui::Id::new("status_footer_border"),
-    ));
-    painter.hline(
-        rect.x_range(),
-        rect.top() + 0.5,
-        egui::Stroke::new(1.0, tokens.border_subtle),
-    );
 }
 
 #[cfg(test)]

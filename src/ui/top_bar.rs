@@ -17,7 +17,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
             bottom: 0,
         });
 
-    let panel = egui::TopBottomPanel::top("top_panel")
+    egui::TopBottomPanel::top("top_panel")
         .frame(frame)
         .exact_height(BAR_HEIGHT)
         .resizable(false)
@@ -87,17 +87,6 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                 });
             });
         });
-
-    let rect = panel.response.rect;
-    let painter = ctx.layer_painter(egui::LayerId::new(
-        egui::Order::Foreground,
-        egui::Id::new("top_bar_border"),
-    ));
-    painter.hline(
-        rect.x_range(),
-        rect.bottom() - 0.5,
-        egui::Stroke::new(1.0, tokens.border_subtle),
-    );
 }
 
 /// Square accent-blue logo tile with a centered Lucide BINARY glyph.

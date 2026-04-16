@@ -1,11 +1,20 @@
 use crate::app::Basie64App;
 use crate::core::batch::{BatchOp, BatchSourceKind, BatchStatus};
+use crate::theme::Tokens;
 use eframe::egui;
 use egui_extras::{Column, TableBuilder};
 use std::path::PathBuf;
 
 pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
+    let t = Tokens::for_theme(app.settings.theme);
+
+    let frame = egui::Frame::new()
+        .fill(t.panel_glass)
+        .shadow(t.shadow_lg)
+        .inner_margin(egui::Margin::same(12));
+
     egui::TopBottomPanel::bottom("batch_panel")
+        .frame(frame)
         .resizable(true)
         .default_height(320.0)
         .min_height(180.0)

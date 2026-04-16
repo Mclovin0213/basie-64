@@ -2,7 +2,7 @@ use crate::app::Basie64App;
 use crate::core::command_registry;
 use crate::core::hash;
 use crate::core::history::{HistoryEntry, HistoryOp};
-use crate::theme::Theme;
+use crate::theme::{Theme, Tokens};
 use eframe::egui;
 
 const PALETTE_WIDTH: f32 = 400.0;
@@ -24,6 +24,8 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
         app.command_palette_selected = filtered.len() - 1;
     }
 
+    let t = Tokens::for_theme(app.settings.theme);
+
     egui::Window::new("Command Palette")
         .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, -80.0))
         .fixed_size(egui::vec2(PALETTE_WIDTH, PALETTE_MAX_HEIGHT))
@@ -31,9 +33,11 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
         .resizable(false)
         .title_bar(false)
         .frame(
-            egui::Frame::window(&egui::Style::default())
+            egui::Frame::new()
+                .fill(t.overlay_surface)
                 .inner_margin(egui::Margin::same(8))
-                .corner_radius(egui::CornerRadius::same(8)),
+                .corner_radius(egui::CornerRadius::same(12))
+                .shadow(t.shadow_lg),
         )
         .show(ctx, |ui| {
             // Search input

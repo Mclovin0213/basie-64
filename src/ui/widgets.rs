@@ -120,6 +120,11 @@ fn button_body(ui: &mut Ui, label: &str, icon: Option<char>, style: ButtonStyle)
     };
 
     let painter = ui.painter_at(rect);
+    // Level 1 shadow for buttons with opaque fills (primary/secondary).
+    if fill != Color32::TRANSPARENT {
+        let shadow_shape = t.shadow_sm.as_shape(rect, CornerRadius::same(corner));
+        painter.add(shadow_shape);
+    }
     painter.rect_filled(rect, CornerRadius::same(corner), visuals_fill);
     if let Some(stroke) = border {
         painter.rect_stroke(
@@ -160,7 +165,7 @@ pub fn primary_button(ui: &mut Ui, label: &str, icon: Option<char>) -> Response 
     )
 }
 
-/// Secondary action — card fill with a subtle border, primary-text label.
+/// Secondary action — card fill, no border, primary-text label.
 pub fn secondary_button(ui: &mut Ui, label: &str, icon: Option<char>) -> Response {
     let t = tokens(ui);
     button_body(
@@ -170,7 +175,7 @@ pub fn secondary_button(ui: &mut Ui, label: &str, icon: Option<char>) -> Respons
         ButtonStyle {
             fill: t.btn_secondary_bg,
             text_color: t.btn_secondary_text,
-            border: Some(t.border_subtle),
+            border: None,
             corner: 6,
             padding: Vec2::new(14.0, 8.0),
         },
@@ -237,37 +242,35 @@ pub fn icon_button(ui: &mut Ui, glyph: char, tooltip: &str, active: bool) -> Res
 
 // ---------- Surfaces: cards, inputs, glass panels ----------------------------
 
-/// A "card" surface: `bg_card` fill, `border_subtle` outline, radius 8, 16px
+/// A "card" surface: `bg_card` fill, Level 1 shadow, radius 8, 16px
 /// inner padding.
 pub fn card_frame<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
     let t = tokens(ui);
     Frame::new()
         .fill(t.bg_card)
-        .stroke(Stroke::new(1.0, t.border_subtle))
         .corner_radius(CornerRadius::same(8))
         .inner_margin(Margin::same(16))
+        .shadow(t.shadow_sm)
         .show(ui, add)
 }
 
-/// An "input" surface: `bg_input` fill, `border_subtle` outline, radius 6, 16px
-/// inner padding.
+/// An "input" surface: `bg_input` fill, no border, no shadow (Level 0 —
+/// recessed by being darker than surrounding surfaces).
 pub fn input_frame<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
     let t = tokens(ui);
     Frame::new()
         .fill(t.bg_input)
-        .stroke(Stroke::new(1.0, t.border_subtle))
         .corner_radius(CornerRadius::same(6))
         .inner_margin(Margin::same(16))
         .show(ui, add)
 }
 
-/// Glass overlay panel — translucent history/settings surface. Top corners
-/// rounded, bottom flat, `panel_glass` fill.
+/// Glass overlay panel — translucent surface with Level 2 shadow. Top corners
+/// rounded, bottom flat, `panel_glass` fill (~92% opacity).
 pub fn glass_panel<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
     let t = tokens(ui);
     Frame::new()
         .fill(t.panel_glass)
-        .stroke(Stroke::new(1.0, t.border_subtle))
         .corner_radius(CornerRadius {
             nw: 12,
             ne: 12,
@@ -275,6 +278,20 @@ pub fn glass_panel<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> InnerRespo
             se: 0,
         })
         .inner_margin(Margin::same(16))
+        .shadow(t.shadow_lg)
+        .show(ui, add)
+}
+
+/// Overlay frame for modals and command palette — `overlay_surface` fill (~94%
+/// opacity), Level 2 shadow, 12px radius. Used for floating UI that sits above
+/// the main content.
+pub fn overlay_frame<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> InnerResponse<R> {
+    let t = tokens(ui);
+    Frame::new()
+        .fill(t.overlay_surface)
+        .corner_radius(CornerRadius::same(12))
+        .inner_margin(Margin::same(16))
+        .shadow(t.shadow_lg)
         .show(ui, add)
 }
 
@@ -361,21 +378,21 @@ pub fn accent_banner(
 /// is open.
 pub fn key_chip(ui: &mut Ui, key: &str, label: &str, active: bool) {
     let t = tokens(ui);
-    let (key_fill, key_border, key_text, label_color) = if active {
+    let (key_fill, key_stroke, key_text, label_color) = if active {
         (
             t.accent_blue_dim,
-            t.accent_blue,
+            Stroke::new(1.0, t.accent_blue),
             t.accent_blue,
             t.accent_blue,
         )
     } else {
-        (t.bg_elevated, t.border_subtle, t.text_mono, t.text_muted)
+        (t.bg_elevated, Stroke::NONE, t.text_mono, t.text_muted)
     };
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 4.0;
         Frame::new()
             .fill(key_fill)
-            .stroke(Stroke::new(1.0, key_border))
+            .stroke(key_stroke)
             .corner_radius(CornerRadius::same(4))
             .inner_margin(Margin::symmetric(6, 2))
             .show(ui, |ui| {
@@ -395,7 +412,6 @@ pub fn meta_chip(ui: &mut Ui, kind: &str) {
     let t = tokens(ui);
     Frame::new()
         .fill(t.bg_elevated)
-        .stroke(Stroke::new(1.0, t.border_subtle))
         .corner_radius(CornerRadius::same(4))
         .inner_margin(Margin::symmetric(6, 2))
         .show(ui, |ui| {

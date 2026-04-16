@@ -73,7 +73,7 @@ mod image_meta_bar {
     use crate::app::Basie64App;
     use crate::theme::icons;
     use crate::ui::widgets;
-    use eframe::egui::{self, CornerRadius, Frame, Margin, Stroke};
+    use eframe::egui::{self, CornerRadius, Frame, Margin};
 
     pub fn show(ui: &mut egui::Ui, app: &mut Basie64App, texture: egui::TextureHandle) {
         let Some(meta) = app.image_meta.clone() else {
@@ -84,13 +84,13 @@ mod image_meta_bar {
         // (1) Image preview with top-only rounded corners
         Frame::new()
             .fill(t.bg_card)
-            .stroke(Stroke::new(1.0, t.border_subtle))
             .corner_radius(CornerRadius {
                 nw: 8,
                 ne: 8,
                 sw: 0,
                 se: 0,
             })
+            .shadow(t.shadow_sm)
             .show(ui, |ui| {
                 ui.add(egui::Image::new(&texture).max_width(ui.available_width()));
             });
@@ -98,7 +98,6 @@ mod image_meta_bar {
         // (2) Metadata bar: kind chip + dimensions + size + Export button
         Frame::new()
             .fill(t.bg_card)
-            .stroke(Stroke::new(1.0, t.border_subtle))
             .corner_radius(CornerRadius::same(0))
             .inner_margin(Margin::symmetric(12, 6))
             .show(ui, |ui| {
