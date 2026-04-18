@@ -50,7 +50,7 @@ If you prefer, you can also build Basie-64 directly from source. You will need [
 
 ```sh
 # 1. Clone the repository
-git clone https://github.com/yourusername/basie-64.git
+git clone https://github.com/Mclovin0213/basie-64.git
 cd basie-64
 
 # 2. Build and run the application

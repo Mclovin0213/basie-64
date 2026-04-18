@@ -4,7 +4,7 @@ Offline-first Base64 encoder/decoder built in Rust + egui (eframe), shipped as b
 
 **Active roadmap:** `POLISH_PLAN.md`. Phase 2 ("Power User") is shipped — including the richer image flow (EXIF extraction, metadata bar, Export Image dialog with lossless metadata stripping). Phase 3+ (code-quality audit, branding, packaging, distribution, launch) is still pending.
 
-**Pencil redesign (separate track):** Phase 1 — design-token foundation — has landed on `feature/design-tokens`: `src/theme.rs` is rewritten around a `Tokens` struct mirroring every variable from `basie_64.pen`, `src/ui/widgets.rs` holds shared button / card / banner / chip helpers, and `assets/fonts/` embeds Inter + IBM Plex Mono + Lucide. Phases 2-7 (per-screen migrations) are pending. See `PENCIL_REDESIGN_PLAN.md` at the repo root for the full plan and the per-screen migration table.
+**Pencil redesign (separate track):** All phases (1–8) are shipped on `master`. `src/theme.rs` is built around a `Tokens` struct mirroring every variable from `basie_64.pen`, `src/ui/widgets.rs` holds shared button / card / banner / chip helpers, `assets/fonts/` embeds Inter + IBM Plex Mono + Lucide, and the per-screen migrations (top bar, footer, input, buttons, banner, history panel, output, export-image dialog) are complete. The Arc-style glassmorphism pass and private-mode purple tinting also landed. Plan file is no longer in the tree — see git history for context.
 
 ---
 

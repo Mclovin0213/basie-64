@@ -1,6 +1,6 @@
 [package]
 name = "basie-64"
-version = "0.2.0"
+version = "0.4.0"
 edition = "2021"
 default-run = "basie-64"
 
@@ -44,7 +44,7 @@ kamadak-exif = "0.5"
 name = "Basie-64"
 identifier = "com.basie64.app"
 icon = ["icon.icns"]
-version = "0.1.0"
+version = "0.4.0"
 copyright = "Copyright © 2026. All rights reserved."
 category = "Developer Tool"
 short_description = "A smooth Base64 encoder and decoder."
