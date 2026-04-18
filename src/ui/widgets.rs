@@ -21,10 +21,19 @@ use eframe::egui::{
 /// never hardcode the palette — they always go through this helper so switching
 /// theme at runtime reskins every call site for free.
 pub fn tokens(ui: &Ui) -> Tokens {
-    if ui.visuals().dark_mode {
+    let base = if ui.visuals().dark_mode {
         Tokens::dark()
     } else {
         Tokens::light()
+    };
+    let private = ui.ctx().data(|d| {
+        d.get_temp::<bool>(egui::Id::new("private_mode"))
+            .unwrap_or(false)
+    });
+    if private {
+        base.with_private_tint()
+    } else {
+        base
     }
 }
 

@@ -1,7 +1,9 @@
 use crate::app::Basie64App;
 use crate::theme::{icons, Theme, Tokens};
 use crate::ui::widgets;
-use eframe::egui;
+use eframe::egui::{
+    self, Color32, CornerRadius, FontFamily, FontId, RichText, Sense, Stroke, Vec2,
+};
 
 const BAR_HEIGHT: f32 = 48.0;
 
@@ -70,13 +72,32 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                         egui::popup::PopupCloseBehavior::CloseOnClickOutside,
                         |ui| {
                             ui.set_min_width(200.0);
-                            let toggle =
-                                ui.checkbox(&mut app.settings.private_mode, "Private mode");
-                            if toggle.clicked() {
-                                app.set_private_mode(app.settings.private_mode);
-                            }
                         },
                     );
+
+                    // Private mode toggle
+                    let pm_icon = if app.settings.private_mode {
+                        icons::EYE_OFF
+                    } else {
+                        icons::EYE
+                    };
+                    let pm_tip = if app.settings.private_mode {
+                        "Private mode ON \u{2014} history paused (\u{2318}\u{21E7}P)"
+                    } else {
+                        "Private mode OFF (\u{2318}\u{21E7}P)"
+                    };
+                    if private_mode_button(ui, pm_icon, pm_tip, app.settings.private_mode, &tokens)
+                        .clicked()
+                    {
+                        app.set_private_mode(!app.settings.private_mode);
+                    }
+                    if app.settings.private_mode {
+                        ui.label(
+                            RichText::new("Private")
+                                .font(FontId::new(11.0, FontFamily::Name("inter_semibold".into())))
+                                .color(tokens.accent_purple),
+                        );
+                    }
 
                     let theme_glyph = theme_icon(app.settings.theme);
                     let theme_tooltip = "Cycle theme: Light → Dark → System";
@@ -110,4 +131,47 @@ fn theme_icon(theme: Theme) -> char {
         Theme::Dark => icons::MOON,
         Theme::System => icons::MONITOR,
     }
+}
+
+fn private_mode_button(
+    ui: &mut egui::Ui,
+    glyph: char,
+    tooltip: &str,
+    active: bool,
+    t: &Tokens,
+) -> egui::Response {
+    let size = Vec2::splat(32.0);
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+    if ui.is_rect_visible(rect) {
+        let painter = ui.painter_at(rect);
+        let fill = if active {
+            t.accent_purple_dim
+        } else if response.hovered() || response.is_pointer_button_down_on() {
+            t.bg_hover
+        } else {
+            Color32::TRANSPARENT
+        };
+        painter.rect_filled(rect, CornerRadius::same(6), fill);
+        if active {
+            painter.rect_stroke(
+                rect,
+                CornerRadius::same(6),
+                Stroke::new(1.0, t.accent_purple),
+                egui::StrokeKind::Inside,
+            );
+        }
+        let glyph_color = if active {
+            t.accent_purple
+        } else {
+            t.text_secondary
+        };
+        let galley = painter.layout_no_wrap(
+            glyph.to_string(),
+            FontId::new(16.0, FontFamily::Name("lucide".into())),
+            glyph_color,
+        );
+        let pos = rect.center() - galley.size() * 0.5;
+        painter.galley(pos, galley, glyph_color);
+    }
+    response.on_hover_text(tooltip)
 }

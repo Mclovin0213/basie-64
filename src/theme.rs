@@ -236,6 +236,29 @@ impl Tokens {
             ResolvedTheme::Light => Self::light(),
         }
     }
+
+    pub fn with_private_tint(mut self) -> Self {
+        use egui::Color32 as C;
+        if self.bg_base == C::from_rgb(0x0D, 0x0F, 0x12) {
+            // Dark mode tint
+            self.bg_base = C::from_rgb(0x10, 0x0F, 0x16);
+            self.bg_surface = C::from_rgb(0x17, 0x15, 0x1E);
+            self.bg_elevated = C::from_rgb(0x1D, 0x1B, 0x27);
+            self.bg_card = C::from_rgb(0x21, 0x1F, 0x2B);
+            self.bg_input = C::from_rgb(0x14, 0x13, 0x1D);
+            self.border_subtle = C::from_rgb(0x2E, 0x2B, 0x3A);
+        } else {
+            // Light mode tint
+            self.bg_base = C::from_rgb(0xF5, 0xF4, 0xFA);
+            self.bg_surface = C::from_rgb(0xED, 0xEB, 0xF4);
+            self.bg_elevated = C::from_rgb(0xFC, 0xFB, 0xFF);
+            self.bg_card = C::from_rgb(0xFC, 0xFB, 0xFF);
+            self.bg_input = C::from_rgb(0xF2, 0xF0, 0xF8);
+            self.border_subtle = C::from_rgb(0xDE, 0xDB, 0xEA);
+        }
+        self.border_focus = self.accent_purple;
+        self
+    }
 }
 
 pub fn load_icon() -> Option<egui::IconData> {
@@ -266,8 +289,13 @@ fn load_icon_bytes() -> Option<Vec<u8>> {
     None
 }
 
-pub fn apply(ctx: &egui::Context, theme: Theme) {
+pub fn apply(ctx: &egui::Context, theme: Theme, private_mode: bool) {
     let tokens = Tokens::for_theme(theme);
+    let tokens = if private_mode {
+        tokens.with_private_tint()
+    } else {
+        tokens
+    };
     let resolved = theme.resolve();
 
     let mut visuals = match resolved {
@@ -425,4 +453,5 @@ pub mod icons {
     pub const CIRCLE_ALERT: char = '\u{E077}';
     pub const INFO: char = '\u{E0F9}';
     pub const COLUMNS_2: char = '\u{E098}';
+    pub const EYE_OFF: char = '\u{E0BB}';
 }

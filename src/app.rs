@@ -55,6 +55,7 @@ pub struct Basie64App {
 
     pub(crate) settings: Settings,
     pub(crate) applied_theme: Option<crate::theme::Theme>,
+    pub(crate) applied_private_mode: Option<bool>,
 
     pub(crate) now: f64,
     pub(crate) copy_pulse_at: Option<f64>,
@@ -148,6 +149,7 @@ impl Default for Basie64App {
             show_convert_banner: false,
             settings,
             applied_theme: None,
+            applied_private_mode: None,
             now: 0.0,
             copy_pulse_at: None,
             banner_fade_start: None,
@@ -829,11 +831,16 @@ impl eframe::App for Basie64App {
         self.now = ctx.input(|i| i.time);
         self.poll_batch_updates();
 
-        // Apply theme if it changed (or first frame).
-        if self.applied_theme != Some(self.settings.theme) {
-            theme::apply(ctx, self.settings.theme);
+        // Apply theme if it changed (or first frame), or if private mode toggled.
+        if self.applied_theme != Some(self.settings.theme)
+            || self.applied_private_mode != Some(self.settings.private_mode)
+        {
+            theme::apply(ctx, self.settings.theme, self.settings.private_mode);
             self.applied_theme = Some(self.settings.theme);
+            self.applied_private_mode = Some(self.settings.private_mode);
         }
+
+        ctx.data_mut(|d| d.insert_temp(egui::Id::new("private_mode"), self.settings.private_mode));
 
         // Keyboard shortcuts. While the Export Image dialog is open it acts
         // as a true modal — only Escape is honored, everything else is
@@ -871,6 +878,10 @@ impl eframe::App for Basie64App {
             }
             if i.modifiers.command && i.key_pressed(egui::Key::H) {
                 self.show_history_panel = !self.show_history_panel;
+            }
+            if i.modifiers.command && i.modifiers.shift && i.key_pressed(egui::Key::P) {
+                let new = !self.settings.private_mode;
+                self.set_private_mode(new);
             }
             if i.modifiers.command && i.key_pressed(egui::Key::D) {
                 if self.show_diff_view {
