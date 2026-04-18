@@ -6,13 +6,43 @@ on:
       - 'v*'  # Push events to matching v*, i.e. v1.0, v20.15.10
 
 jobs:
+  verify:
+    name: Verify tag matches Cargo.toml versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches [package].version and [package.metadata.bundle].version
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          python3 - "$tag" <<'PY'
+          import sys, tomllib
+          tag = sys.argv[1]
+          with open("Cargo.toml", "rb") as f:
+              data = tomllib.load(f)
+          pkg = data["package"]["version"]
+          bundle = data["package"]["metadata"]["bundle"]["version"]
+          print(f"tag={tag} package={pkg} bundle={bundle}")
+          errors = []
+          if tag != pkg:
+              errors.append(f"Tag v{tag} does not match [package].version = \"{pkg}\"")
+          if tag != bundle:
+              errors.append(f"Tag v{tag} does not match [package.metadata.bundle].version = \"{bundle}\"")
+          if errors:
+              for e in errors:
+                  print(f"::error::{e}")
+              sys.exit(1)
+          PY
+
   build:
     name: Build Release Binaries
+    needs: verify
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-    
+
     steps:
       - uses: actions/checkout@v4
 
