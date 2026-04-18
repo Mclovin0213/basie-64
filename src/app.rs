@@ -842,6 +842,17 @@ impl eframe::App for Basie64App {
 
         ctx.data_mut(|d| d.insert_temp(egui::Id::new("private_mode"), self.settings.private_mode));
 
+        if self.settings.private_mode {
+            let tokens = theme::Tokens::for_theme(self.settings.theme).with_private_tint();
+            let screen = ctx.screen_rect();
+            ctx.layer_painter(egui::LayerId::background()).rect_stroke(
+                screen,
+                egui::CornerRadius::same(0),
+                egui::Stroke::new(2.0, tokens.accent_purple),
+                egui::StrokeKind::Inside,
+            );
+        }
+
         // Keyboard shortcuts. While the Export Image dialog is open it acts
         // as a true modal — only Escape is honored, everything else is
         // suppressed so the user can't mutate state behind the overlay.

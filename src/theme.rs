@@ -240,21 +240,21 @@ impl Tokens {
     pub fn with_private_tint(mut self) -> Self {
         use egui::Color32 as C;
         if self.bg_base == C::from_rgb(0x0D, 0x0F, 0x12) {
-            // Dark mode tint
-            self.bg_base = C::from_rgb(0x10, 0x0F, 0x16);
-            self.bg_surface = C::from_rgb(0x17, 0x15, 0x1E);
-            self.bg_elevated = C::from_rgb(0x1D, 0x1B, 0x27);
-            self.bg_card = C::from_rgb(0x21, 0x1F, 0x2B);
-            self.bg_input = C::from_rgb(0x14, 0x13, 0x1D);
-            self.border_subtle = C::from_rgb(0x2E, 0x2B, 0x3A);
+            // Dark mode tint — noticeable purple wash
+            self.bg_base = C::from_rgb(0x13, 0x0E, 0x1C);
+            self.bg_surface = C::from_rgb(0x1B, 0x14, 0x28);
+            self.bg_elevated = C::from_rgb(0x22, 0x1A, 0x30);
+            self.bg_card = C::from_rgb(0x26, 0x1E, 0x35);
+            self.bg_input = C::from_rgb(0x18, 0x12, 0x24);
+            self.border_subtle = C::from_rgb(0x38, 0x2A, 0x4A);
         } else {
-            // Light mode tint
-            self.bg_base = C::from_rgb(0xF5, 0xF4, 0xFA);
-            self.bg_surface = C::from_rgb(0xED, 0xEB, 0xF4);
-            self.bg_elevated = C::from_rgb(0xFC, 0xFB, 0xFF);
-            self.bg_card = C::from_rgb(0xFC, 0xFB, 0xFF);
-            self.bg_input = C::from_rgb(0xF2, 0xF0, 0xF8);
-            self.border_subtle = C::from_rgb(0xDE, 0xDB, 0xEA);
+            // Light mode tint — noticeable purple wash
+            self.bg_base = C::from_rgb(0xF0, 0xEB, 0xF8);
+            self.bg_surface = C::from_rgb(0xE8, 0xE1, 0xF2);
+            self.bg_elevated = C::from_rgb(0xF8, 0xF4, 0xFF);
+            self.bg_card = C::from_rgb(0xF8, 0xF4, 0xFF);
+            self.bg_input = C::from_rgb(0xED, 0xE7, 0xF6);
+            self.border_subtle = C::from_rgb(0xD2, 0xC8, 0xE4);
         }
         self.border_focus = self.accent_purple;
         self
