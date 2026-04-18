@@ -181,27 +181,25 @@ fn compute_warnings(
     match claim_as_i64("nbf") {
         None => {}
         Some(Err(())) => warnings.push(JwtWarning::MalformedTimestamp { claim: "nbf" }),
-        Some(Ok(nbf)) => {
-            if nbf > now_secs {
-                warnings.push(JwtWarning::NotYetValid {
-                    nbf,
-                    in_secs: nbf - now_secs,
-                });
-            }
+        Some(Ok(nbf)) if nbf > now_secs => {
+            warnings.push(JwtWarning::NotYetValid {
+                nbf,
+                in_secs: nbf - now_secs,
+            });
         }
+        Some(Ok(_)) => {}
     }
 
     match claim_as_i64("iat") {
         None => {}
         Some(Err(())) => warnings.push(JwtWarning::MalformedTimestamp { claim: "iat" }),
-        Some(Ok(iat)) => {
-            if iat > now_secs {
-                warnings.push(JwtWarning::IssuedInFuture {
-                    iat,
-                    in_secs: iat - now_secs,
-                });
-            }
+        Some(Ok(iat)) if iat > now_secs => {
+            warnings.push(JwtWarning::IssuedInFuture {
+                iat,
+                in_secs: iat - now_secs,
+            });
         }
+        Some(Ok(_)) => {}
     }
 
     warnings
