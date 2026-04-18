@@ -219,11 +219,9 @@ fn execute_command_by_id(app: &mut Basie64App, cmd_id: &str, ctx: &egui::Context
         "decode" => {
             app.request_decode(ctx);
         }
-        "copy_output" => {
-            if !app.output.is_empty() {
-                ctx.copy_text(app.output.clone());
-                app.mark_copy_pulse();
-            }
+        "copy_output" if !app.output.is_empty() => {
+            ctx.copy_text(app.output.clone());
+            app.mark_copy_pulse();
         }
         "clear_all" => {
             app.clear();
@@ -251,18 +249,14 @@ fn execute_command_by_id(app: &mut Basie64App, cmd_id: &str, ctx: &egui::Context
             let new_mode = !app.settings.private_mode;
             app.set_private_mode(new_mode);
         }
-        "batch_encode_folder" => {
-            if !app.is_batch_running() {
-                if let Some(dir) = rfd::FileDialog::new().pick_folder() {
-                    app.start_batch_encode(dir, None);
-                }
+        "batch_encode_folder" if !app.is_batch_running() => {
+            if let Some(dir) = rfd::FileDialog::new().pick_folder() {
+                app.start_batch_encode(dir, None);
             }
         }
-        "batch_decode_folder" => {
-            if !app.is_batch_running() {
-                if let Some(dir) = rfd::FileDialog::new().pick_folder() {
-                    app.start_batch_decode(dir, None);
-                }
+        "batch_decode_folder" if !app.is_batch_running() => {
+            if let Some(dir) = rfd::FileDialog::new().pick_folder() {
+                app.start_batch_decode(dir, None);
             }
         }
         "show_diff_mode" => {
