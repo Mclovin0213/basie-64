@@ -5,80 +5,86 @@ use eframe::egui;
 /// Render the full diff view, replacing the standard CentralPanel.
 /// The top bar is rendered separately by app.rs before this is called.
 pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
-    egui::CentralPanel::default().show(ctx, |ui| {
-        // Header row
-        ui.horizontal(|ui| {
-            ui.heading("Diff");
-            if let Some(result) = &app.diff_result {
-                let summary = format!(
-                    "{} addition{}, {} removal{}, {} unchanged",
-                    result.additions,
-                    if result.additions == 1 { "" } else { "s" },
-                    result.removals,
-                    if result.removals == 1 { "" } else { "s" },
-                    result.unchanged,
-                );
-                ui.label(egui::RichText::new(summary).weak().small());
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.small_button("✕").clicked() {
-                    app.show_diff_view = false;
+    egui::CentralPanel::default()
+        .frame(egui::Frame::NONE)
+        .show(ctx, |ui| {
+            // Header row
+            ui.horizontal(|ui| {
+                ui.heading("Diff");
+                if let Some(result) = &app.diff_result {
+                    let summary = format!(
+                        "{} addition{}, {} removal{}, {} unchanged",
+                        result.additions,
+                        if result.additions == 1 { "" } else { "s" },
+                        result.removals,
+                        if result.removals == 1 { "" } else { "s" },
+                        result.unchanged,
+                    );
+                    ui.label(egui::RichText::new(summary).weak().small());
                 }
-                ui.label(egui::RichText::new("⌘D to toggle").weak().small());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.small_button("✕").clicked() {
+                        app.show_diff_view = false;
+                    }
+                    ui.label(egui::RichText::new("⌘D to toggle").weak().small());
+                });
             });
-        });
 
-        ui.add_space(8.0);
+            ui.add_space(8.0);
 
-        // Two input boxes — auto-compare on change
-        let inputs_changed = show_inputs(app, ui);
-        if inputs_changed
-            || (app.diff_input_a != app.diff_last_a || app.diff_input_b != app.diff_last_b)
-        {
-            app.run_diff();
-        }
-
-        ui.add_space(8.0);
-
-        // Diff output
-        if let Some(result) = app.diff_result.clone() {
-            if result.lines.is_empty() && app.diff_input_a.is_empty() && app.diff_input_b.is_empty()
+            // Two input boxes — auto-compare on change
+            let inputs_changed = show_inputs(app, ui);
+            if inputs_changed
+                || (app.diff_input_a != app.diff_last_a || app.diff_input_b != app.diff_last_b)
             {
-                show_empty_hint(ui);
-            } else if result.additions == 0 && result.removals == 0 {
-                ui.vertical_centered(|ui| {
-                    ui.add_space(20.0);
-                    ui.label(
-                        egui::RichText::new("No differences — inputs decode to identical content.")
+                app.run_diff();
+            }
+
+            ui.add_space(8.0);
+
+            // Diff output
+            if let Some(result) = app.diff_result.clone() {
+                if result.lines.is_empty()
+                    && app.diff_input_a.is_empty()
+                    && app.diff_input_b.is_empty()
+                {
+                    show_empty_hint(ui);
+                } else if result.additions == 0 && result.removals == 0 {
+                    ui.vertical_centered(|ui| {
+                        ui.add_space(20.0);
+                        ui.label(
+                            egui::RichText::new(
+                                "No differences — inputs decode to identical content.",
+                            )
                             .weak()
                             .italics(),
-                    );
-                });
-            } else {
-                let mode_label = if app.diff_is_binary {
-                    "Binary diff (hex dump)"
-                } else {
-                    "Text diff"
-                };
-                ui.label(egui::RichText::new(mode_label).weak().small());
-                ui.add_space(4.0);
-
-                egui::ScrollArea::vertical()
-                    .id_salt("diff_output_scroll")
-                    .show(ui, |ui| {
-                        ui.columns(2, |cols| {
-                            show_column(&result.lines, Side::Left, &mut cols[0]);
-                            show_column(&result.lines, Side::Right, &mut cols[1]);
-                        });
+                        );
                     });
+                } else {
+                    let mode_label = if app.diff_is_binary {
+                        "Binary diff (hex dump)"
+                    } else {
+                        "Text diff"
+                    };
+                    ui.label(egui::RichText::new(mode_label).weak().small());
+                    ui.add_space(4.0);
+
+                    egui::ScrollArea::vertical()
+                        .id_salt("diff_output_scroll")
+                        .show(ui, |ui| {
+                            ui.columns(2, |cols| {
+                                show_column(&result.lines, Side::Left, &mut cols[0]);
+                                show_column(&result.lines, Side::Right, &mut cols[1]);
+                            });
+                        });
+                }
+            } else if let Some(error) = &app.diff_error {
+                ui.add_space(12.0);
+                ui.colored_label(egui::Color32::LIGHT_RED, format!("⚠️ {}", error));
+            } else {
+                show_empty_hint(ui);
             }
-        } else if let Some(error) = &app.diff_error {
-            ui.add_space(12.0);
-            ui.colored_label(egui::Color32::LIGHT_RED, format!("⚠️ {}", error));
-        } else {
-            show_empty_hint(ui);
-        }
-    });
+        });
 }
 
 fn show_empty_hint(ui: &mut egui::Ui) {

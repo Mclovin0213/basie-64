@@ -8,12 +8,31 @@ use eframe::egui::{
 const BAR_HEIGHT: f32 = 48.0;
 
 pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
-    let tokens = Tokens::for_theme(app.settings.theme);
+    let tokens = if app.settings.private_mode {
+        Tokens::for_theme(app.settings.theme).with_private_tint()
+    } else {
+        Tokens::for_theme(app.settings.theme)
+    };
 
+    // On macOS the native traffic-light buttons sit in the top-left ~78pt of
+    // the window when `fullsize_content_view` is on — push our content right
+    // so the logo doesn't sit underneath them.
+    let left_inset: i8 = if cfg!(target_os = "macos") { 88 } else { 16 };
+
+    // Paint the semi-transparent window background here, rounded on the top
+    // two corners only, so this panel forms the rounded window shape at the
+    // head of the window.
+    let radius = crate::app::WINDOW_RADIUS as u8;
     let frame = egui::Frame::new()
-        .fill(tokens.bg_surface)
+        .fill(tokens.bg_window_tinted)
+        .corner_radius(egui::CornerRadius {
+            nw: radius,
+            ne: radius,
+            sw: 0,
+            se: 0,
+        })
         .inner_margin(egui::Margin {
-            left: 16,
+            left: left_inset,
             right: 16,
             top: 0,
             bottom: 0,
@@ -46,8 +65,14 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     ui.spacing_mut().item_spacing.x = 4.0;
 
-                    if widgets::icon_button(ui, icons::X, "Close window", false).clicked() {
-                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    // Native macOS traffic-light buttons (top-left) handle window
+                    // close/minimize/maximize there. Only render our custom close
+                    // button on Windows / Linux where there's no native chrome.
+                    #[cfg(not(target_os = "macos"))]
+                    {
+                        if widgets::icon_button(ui, icons::X, "Close window", false).clicked() {
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                        }
                     }
 
                     let history_btn = widgets::icon_button(

@@ -826,7 +826,15 @@ impl Basie64App {
     }
 }
 
+/// Corner radius for the painted window background. Matches the radius passed
+/// to `apply_vibrancy` so the NSVisualEffectView clip stays in sync on macOS.
+pub(crate) const WINDOW_RADIUS: f32 = 11.0;
+
 impl eframe::App for Basie64App {
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        egui::Rgba::TRANSPARENT.to_array()
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.now = ctx.input(|i| i.time);
         self.poll_batch_updates();
@@ -842,16 +850,11 @@ impl eframe::App for Basie64App {
 
         ctx.data_mut(|d| d.insert_temp(egui::Id::new("private_mode"), self.settings.private_mode));
 
-        if self.settings.private_mode {
-            let tokens = theme::Tokens::for_theme(self.settings.theme).with_private_tint();
-            let screen = ctx.screen_rect();
-            ctx.layer_painter(egui::LayerId::background()).rect_stroke(
-                screen,
-                egui::CornerRadius::same(0),
-                egui::Stroke::new(2.0, tokens.accent_purple),
-                egui::StrokeKind::Inside,
-            );
-        }
+        // The rounded, semi-transparent window background is painted by each
+        // panel's own Frame (top_bar rounds top corners, footer rounds bottom
+        // corners, CentralPanel fills the middle). That avoids the painted-
+        // background-in-Background-layer ordering hazard where the bg rect
+        // could end up drawn over panel content.
 
         // Keyboard shortcuts. While the Export Image dialog is open it acts
         // as a true modal — only Escape is honored, everything else is
@@ -934,23 +937,34 @@ impl eframe::App for Basie64App {
         ui::top_bar::show(self, ctx);
         show_status_footer(self, ctx);
 
+        let tokens = if self.settings.private_mode {
+            theme::Tokens::for_theme(self.settings.theme).with_private_tint()
+        } else {
+            theme::Tokens::for_theme(self.settings.theme)
+        };
+        let central_frame = egui::Frame::new()
+            .fill(tokens.bg_window_tinted)
+            .inner_margin(egui::Margin::ZERO);
+
         if self.show_diff_view {
             ui::diff_view::show(self, ctx);
         } else {
-            egui::CentralPanel::default().show(ctx, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    ui.add_space(10.0);
-                    ui::banner::show(self, ctx, ui);
-                    ui::banner::show_convert_hint(self, ctx, ui);
-                    ui::banner::show_mixed_matches(self, ctx, ui);
-                    ui::input::show(self, ui);
-                    ui.add_space(12.0);
-                    ui::buttons::show(self, ctx, ui);
-                    ui.add_space(12.0);
-                    ui::output::show(self, ctx, ui);
-                    ui::banner::show_error(self, ctx, ui);
+            egui::CentralPanel::default()
+                .frame(central_frame)
+                .show(ctx, |ui| {
+                    egui::ScrollArea::vertical().show(ui, |ui| {
+                        ui.add_space(10.0);
+                        ui::banner::show(self, ctx, ui);
+                        ui::banner::show_convert_hint(self, ctx, ui);
+                        ui::banner::show_mixed_matches(self, ctx, ui);
+                        ui::input::show(self, ui);
+                        ui.add_space(12.0);
+                        ui::buttons::show(self, ctx, ui);
+                        ui.add_space(12.0);
+                        ui::output::show(self, ctx, ui);
+                        ui::banner::show_error(self, ctx, ui);
+                    });
                 });
-            });
         }
 
         // History panel (bottom panel)
@@ -972,6 +986,13 @@ impl eframe::App for Basie64App {
             ui::export_image_dialog::show(self, ctx);
         }
 
+        // Edge/corner resize handles — rendered last (top-most foreground layer)
+        // so they win hit-testing on the window's border strip even with
+        // panels and modals open. Skipped on macOS where the OS provides
+        // edge-resize natively when window decorations are enabled.
+        #[cfg(not(target_os = "macos"))]
+        ui::window_resize::show(ctx);
+
         // Keep animations ticking
         if self.copy_pulse_at.is_some()
             || ui::banner::is_fade_active(self.banner_fade_start, self.now)
@@ -989,11 +1010,24 @@ impl eframe::App for Basie64App {
 /// Persistent 32px bottom panel that surfaces the main keyboard shortcuts.
 /// Renders `bg_surface` with an upward shadow for Arc-style floating depth.
 fn show_status_footer(app: &Basie64App, ctx: &egui::Context) {
-    let tokens = crate::theme::Tokens::for_theme(app.settings.theme);
+    let tokens = if app.settings.private_mode {
+        crate::theme::Tokens::for_theme(app.settings.theme).with_private_tint()
+    } else {
+        crate::theme::Tokens::for_theme(app.settings.theme)
+    };
 
+    // Paint the semi-transparent window background here, rounded on the bottom
+    // two corners only, so this panel completes the rounded window shape at the
+    // foot of the window.
+    let radius = WINDOW_RADIUS as u8;
     let frame = egui::Frame::new()
-        .fill(tokens.bg_surface)
-        .shadow(tokens.shadow_up)
+        .fill(tokens.bg_window_tinted)
+        .corner_radius(egui::CornerRadius {
+            nw: 0,
+            ne: 0,
+            sw: radius,
+            se: radius,
+        })
         .inner_margin(egui::Margin {
             left: 16,
             right: 16,

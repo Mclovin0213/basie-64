@@ -9,3 +9,5 @@ pub mod input;
 pub mod output;
 pub mod top_bar;
 pub mod widgets;
+#[cfg(not(target_os = "macos"))]
+pub mod window_resize;

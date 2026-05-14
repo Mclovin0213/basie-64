@@ -51,6 +51,7 @@ pub(crate) enum ResolvedTheme {
 #[derive(Debug, Clone, Copy)]
 pub struct Tokens {
     pub bg_base: egui::Color32,
+    pub bg_window_tinted: egui::Color32,
     pub bg_surface: egui::Color32,
     pub bg_elevated: egui::Color32,
     pub bg_card: egui::Color32,
@@ -101,6 +102,7 @@ impl Tokens {
         use egui::Color32 as C;
         Self {
             bg_base: C::from_rgb(0x0D, 0x0F, 0x12),
+            bg_window_tinted: C::from_rgba_unmultiplied(0x14, 0x16, 0x1C, 0xC8),
             bg_surface: C::from_rgb(0x14, 0x16, 0x1B),
             bg_elevated: C::from_rgb(0x1A, 0x1D, 0x24),
             bg_card: C::from_rgb(0x1E, 0x21, 0x28),
@@ -169,6 +171,7 @@ impl Tokens {
         use egui::Color32 as C;
         Self {
             bg_base: C::from_rgb(0xF7, 0xF8, 0xFA),
+            bg_window_tinted: C::from_rgba_unmultiplied(0xF5, 0xF6, 0xF8, 0xD2),
             bg_surface: C::from_rgb(0xEF, 0xF1, 0xF4),
             bg_elevated: C::from_rgb(0xFF, 0xFF, 0xFF),
             bg_card: C::from_rgb(0xFF, 0xFF, 0xFF),
@@ -242,6 +245,7 @@ impl Tokens {
         if self.bg_base == C::from_rgb(0x0D, 0x0F, 0x12) {
             // Dark mode tint — noticeable purple wash
             self.bg_base = C::from_rgb(0x13, 0x0E, 0x1C);
+            self.bg_window_tinted = C::from_rgba_unmultiplied(0x1B, 0x14, 0x28, 0xC8);
             self.bg_surface = C::from_rgb(0x1B, 0x14, 0x28);
             self.bg_elevated = C::from_rgb(0x22, 0x1A, 0x30);
             self.bg_card = C::from_rgb(0x26, 0x1E, 0x35);
@@ -250,6 +254,7 @@ impl Tokens {
         } else {
             // Light mode tint — noticeable purple wash
             self.bg_base = C::from_rgb(0xF0, 0xEB, 0xF8);
+            self.bg_window_tinted = C::from_rgba_unmultiplied(0xE8, 0xE1, 0xF2, 0xD2);
             self.bg_surface = C::from_rgb(0xE8, 0xE1, 0xF2);
             self.bg_elevated = C::from_rgb(0xF8, 0xF4, 0xFF);
             self.bg_card = C::from_rgb(0xF8, 0xF4, 0xFF);
