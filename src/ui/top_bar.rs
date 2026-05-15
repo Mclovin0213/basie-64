@@ -24,7 +24,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
     // head of the window.
     let radius = crate::app::WINDOW_RADIUS as u8;
     let frame = egui::Frame::new()
-        .fill(tokens.bg_window_tinted)
+        .fill(tokens.window_fill(app.settings.translucent_window))
         .corner_radius(egui::CornerRadius {
             nw: radius,
             ne: radius,
@@ -97,6 +97,16 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                         egui::popup::PopupCloseBehavior::CloseOnClickOutside,
                         |ui| {
                             ui.set_min_width(200.0);
+                            let mut translucent = app.settings.translucent_window;
+                            if ui
+                                .checkbox(&mut translucent, "Translucent window")
+                                .on_hover_text("When on, the desktop bleeds through panel fills.")
+                                .changed()
+                            {
+                                app.settings.translucent_window = translucent;
+                                app.settings.save();
+                                ctx.request_repaint();
+                            }
                         },
                     );
 

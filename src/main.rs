@@ -58,6 +58,14 @@ fn main() -> eframe::Result {
             theme::install_fonts(&cc.egui_ctx);
             theme::apply(&cc.egui_ctx, app.settings.theme, app.settings.private_mode);
 
+            // Native macOS vibrancy (`window_vibrancy::apply_vibrancy`) is
+            // intentionally not used here. With eframe 0.31 the
+            // `NSVisualEffectView` gets inserted as a sibling that occludes
+            // egui's Metal content view, leaving the UI blank. We rely on
+            // painted `bg_window_tinted` panel fills over a transparent
+            // window for the "see through" look instead. See
+            // ~/.claude/plans/do-some-research-on-vast-key.md for the full
+            // investigation before re-introducing this.
             #[cfg(target_os = "windows")]
             {
                 use window_vibrancy::apply_mica;

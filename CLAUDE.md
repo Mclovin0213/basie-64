@@ -6,6 +6,8 @@ Offline-first Base64 encoder/decoder built in Rust + egui (eframe), shipped as b
 
 **Pencil redesign (separate track):** All phases (1–8) are shipped on `master`. `src/theme.rs` is built around a `Tokens` struct mirroring every variable from `basie_64.pen`, `src/ui/widgets.rs` holds shared button / card / banner / chip helpers, `assets/fonts/` embeds Inter + IBM Plex Mono + Lucide, and the per-screen migrations (top bar, footer, input, buttons, banner, history panel, output, export-image dialog) are complete. The Arc-style glassmorphism pass and private-mode purple tinting also landed. Plan file is no longer in the tree — see git history for context.
 
+**Window translucency (shipped):** macOS launches transparent by default (`with_transparent(true)` + `fullsize_content_view` + custom panel fills). A persisted `Settings.translucent_window` (default true) is exposed in the top-bar settings menu; when off, panels paint opaque `bg_surface` and `clear_color` returns the opaque base color. Native macOS NSVisualEffectView blur is intentionally not used — `window-vibrancy` 0.7 inserts the effect view above egui's Metal content layer and blanks the UI. The "see through" look comes from painted `bg_window_tinted` over a transparent window. See `src/main.rs` and `~/.claude/plans/do-some-research-on-vast-key.md` before re-introducing native vibrancy. Surface tokens carry alpha (`bg_window_tinted` ~92%, `panel_glass` ~96%, `history_bg` ~92%, `bg_card` / `bg_input` ~94%) so cards and inputs pick up a hint of the window tint instead of floating as opaque stickers. Geometry is unified: window-edge panels = 11 (`WINDOW_RADIUS`), large surfaces (`card_frame` / `glass_panel` / `overlay_frame`) = 10, small chrome (inputs, banners, buttons) = 6. The central panel has a 12px left/right inner margin so input/output blocks don't kiss the window edges.
+
 ---
 
 ## Module map
@@ -17,7 +19,7 @@ src/
 ├── cli.rs               CLI entry: clap subcommands (encode/decode/convert/detect/diff/hash), stdin + file I/O.
 ├── app.rs               Basie64App state + eframe::App::update dispatcher. Keyboard shortcuts, drag-drop, feature toggles.
 ├── theme.rs             Theme enum (Light/Dark/System), `Tokens` struct (the Pencil palette), `apply()` which builds egui::Visuals from tokens, `install_fonts()` embedding Inter / IBM Plex Mono / Lucide via `include_bytes!`, and `pub mod icons` exposing Lucide PUA codepoints.
-├── settings.rs          Persisted prefs (theme, private_mode, recent files) — TOML in OS config dir via `directories`.
+├── settings.rs          Persisted prefs (theme, private_mode, translucent_window, recent files) — TOML in OS config dir via `directories`.
 ├── samples.rs           Hard-coded sample payloads (JWT, PNG data URI, JSON) for the Samples menu.
 ├── decode.rs            Thin app-level wrapper: calls core::decode and mutates Basie64App state (output, jwt_inspection, image_preview, image_meta, error, history).
 ├── detect.rs            Thin app-level wrapper: calls core::detect and mutates Basie64App state (detected_format, banners, mixed_matches, diff split).
@@ -37,7 +39,7 @@ src/
 └── ui/                  egui widgets. Imports core/ for logic and reads/writes Basie64App state directly.
     ├── mod.rs
     ├── widgets.rs       Shared design-system helpers consumed by every screen migration: `primary/secondary/ghost_button`, `icon_button` (with `active` toggle state), `card_frame`/`input_frame`/`glass_panel`, `divider`, `accent_banner`, `key_chip`, `meta_chip`, `section_header`. Pure — reads tokens off `ui.visuals().dark_mode`, never mutates `Basie64App`.
-    ├── top_bar.rs       Draggable titlebar, theme toggle, settings menu (private-mode toggle), history-panel toggle, close button.
+    ├── top_bar.rs       Draggable titlebar, theme toggle, settings menu (translucent-window toggle), private-mode toggle, history-panel toggle, close button.
     ├── input.rs         Input text area, empty-state hint, samples menu, large-paste guard.
     ├── buttons.rs       Action row: Encode / Decode / Diff / Save as File / Clear + batch folder/file dialogs.
     ├── output.rs        Output monospace area, Copy / Copy as Data URI, image preview + image metadata bar (kind/dimensions/size, EXIF collapsible, Export… button), JWT inspector subpanel (payload viewer + HMAC secret input + verification).
@@ -83,7 +85,8 @@ cargo clippy --all-targets -- -D warnings    # lint (must be clean)
 
 | Want to change... | Edit |
 |---|---|
-| Color palette / spacing (design tokens) | `src/theme.rs` (`Tokens::dark()` / `Tokens::light()`) |
+| Color palette / spacing (design tokens) | `src/theme.rs` (`Tokens::dark()` / `Tokens::light()` / `with_private_tint()`) |
+| Window translucency (default-true toggle) | `src/settings.rs` (`translucent_window`) + `Tokens::window_fill` + top-bar settings menu in `src/ui/top_bar.rs` |
 | Shared button / card / banner widgets | `src/ui/widgets.rs` |
 | Embedded fonts (Inter, IBM Plex Mono, Lucide) | `assets/fonts/` + `theme::install_fonts` |
 | Lucide icon glyph constants | `src/theme.rs` (`pub mod icons`) |

@@ -3,7 +3,7 @@ use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Settings {
     #[serde(default)]
     pub theme: Theme,
@@ -12,6 +12,27 @@ pub struct Settings {
     /// When true, no history entries are recorded.
     #[serde(default)]
     pub private_mode: bool,
+    /// When true, panels paint semi-transparent over the transparent window
+    /// so the desktop bleeds through. When false, panels paint opaque so the
+    /// window looks like a normal app. Default true — translucency is a
+    /// staple of the app's look.
+    #[serde(default = "default_translucent_window")]
+    pub translucent_window: bool,
+}
+
+fn default_translucent_window() -> bool {
+    true
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            theme: Theme::default(),
+            recent_files: Vec::new(),
+            private_mode: false,
+            translucent_window: true,
+        }
+    }
 }
 
 impl Settings {

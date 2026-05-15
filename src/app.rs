@@ -832,7 +832,16 @@ pub(crate) const WINDOW_RADIUS: f32 = 11.0;
 
 impl eframe::App for Basie64App {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        egui::Rgba::TRANSPARENT.to_array()
+        if self.settings.translucent_window {
+            egui::Rgba::TRANSPARENT.to_array()
+        } else {
+            let tokens = if self.settings.private_mode {
+                theme::Tokens::for_theme(self.settings.theme).with_private_tint()
+            } else {
+                theme::Tokens::for_theme(self.settings.theme)
+            };
+            egui::Rgba::from(tokens.bg_surface).to_array()
+        }
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -943,8 +952,13 @@ impl eframe::App for Basie64App {
             theme::Tokens::for_theme(self.settings.theme)
         };
         let central_frame = egui::Frame::new()
-            .fill(tokens.bg_window_tinted)
-            .inner_margin(egui::Margin::ZERO);
+            .fill(tokens.window_fill(self.settings.translucent_window))
+            .inner_margin(egui::Margin {
+                left: 12,
+                right: 12,
+                top: 0,
+                bottom: 0,
+            });
 
         if self.show_diff_view {
             ui::diff_view::show(self, ctx);
@@ -1021,7 +1035,7 @@ fn show_status_footer(app: &Basie64App, ctx: &egui::Context) {
     // foot of the window.
     let radius = WINDOW_RADIUS as u8;
     let frame = egui::Frame::new()
-        .fill(tokens.bg_window_tinted)
+        .fill(tokens.window_fill(app.settings.translucent_window))
         .corner_radius(egui::CornerRadius {
             nw: 0,
             ne: 0,

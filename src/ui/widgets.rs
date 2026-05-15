@@ -257,7 +257,7 @@ pub fn card_frame<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> InnerRespon
     let t = tokens(ui);
     Frame::new()
         .fill(t.bg_card)
-        .corner_radius(CornerRadius::same(8))
+        .corner_radius(CornerRadius::same(10))
         .inner_margin(Margin::same(16))
         .shadow(t.shadow_sm)
         .show(ui, add)
@@ -281,8 +281,8 @@ pub fn glass_panel<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> InnerRespo
     Frame::new()
         .fill(t.panel_glass)
         .corner_radius(CornerRadius {
-            nw: 12,
-            ne: 12,
+            nw: 10,
+            ne: 10,
             sw: 0,
             se: 0,
         })
@@ -298,7 +298,7 @@ pub fn overlay_frame<R>(ui: &mut Ui, add: impl FnOnce(&mut Ui) -> R) -> InnerRes
     let t = tokens(ui);
     Frame::new()
         .fill(t.overlay_surface)
-        .corner_radius(CornerRadius::same(12))
+        .corner_radius(CornerRadius::same(10))
         .inner_margin(Margin::same(16))
         .shadow(t.shadow_lg)
         .show(ui, add)

@@ -98,15 +98,27 @@ pub struct Tokens {
 }
 
 impl Tokens {
+    /// Returns the fill used for the window's panel backgrounds. When
+    /// `translucent` is true, returns the semi-transparent
+    /// `bg_window_tinted` so the desktop bleeds through; otherwise returns
+    /// the fully-opaque `bg_surface` for a normal-window look.
+    pub fn window_fill(&self, translucent: bool) -> egui::Color32 {
+        if translucent {
+            self.bg_window_tinted
+        } else {
+            self.bg_surface
+        }
+    }
+
     pub fn dark() -> Self {
         use egui::Color32 as C;
         Self {
             bg_base: C::from_rgb(0x0D, 0x0F, 0x12),
-            bg_window_tinted: C::from_rgba_unmultiplied(0x14, 0x16, 0x1C, 0xC8),
+            bg_window_tinted: C::from_rgba_unmultiplied(0x14, 0x16, 0x1C, 0xEB),
             bg_surface: C::from_rgb(0x14, 0x16, 0x1B),
             bg_elevated: C::from_rgb(0x1A, 0x1D, 0x24),
-            bg_card: C::from_rgb(0x1E, 0x21, 0x28),
-            bg_input: C::from_rgb(0x12, 0x14, 0x1A),
+            bg_card: C::from_rgba_unmultiplied(0x1E, 0x21, 0x28, 0xF0),
+            bg_input: C::from_rgba_unmultiplied(0x12, 0x14, 0x1A, 0xF0),
             bg_hover: C::from_rgb(0x25, 0x28, 0x30),
 
             border_subtle: C::from_rgb(0x2A, 0x2D, 0x36),
@@ -137,10 +149,10 @@ impl Tokens {
             btn_secondary_text: C::from_rgb(0xC4, 0xCA, 0xD4),
             btn_ghost_text: C::from_rgb(0x9B, 0xA1, 0xAD),
 
-            history_bg: C::from_rgba_unmultiplied(0x11, 0x13, 0x18, 0xCC),
+            history_bg: C::from_rgba_unmultiplied(0x11, 0x13, 0x18, 0xEB),
             modal_backdrop: C::from_rgba_unmultiplied(0x0D, 0x0F, 0x12, 0x99),
             modal_surface: C::from_rgb(0x1A, 0x1D, 0x24),
-            panel_glass: C::from_rgba_unmultiplied(0x14, 0x16, 0x1B, 0xEB),
+            panel_glass: C::from_rgba_unmultiplied(0x14, 0x16, 0x1B, 0xF5),
             overlay_surface: C::from_rgba_unmultiplied(0x1A, 0x1D, 0x24, 0xF0),
 
             shadow_sm: Shadow {
@@ -171,11 +183,11 @@ impl Tokens {
         use egui::Color32 as C;
         Self {
             bg_base: C::from_rgb(0xF7, 0xF8, 0xFA),
-            bg_window_tinted: C::from_rgba_unmultiplied(0xF5, 0xF6, 0xF8, 0xD2),
+            bg_window_tinted: C::from_rgba_unmultiplied(0xF5, 0xF6, 0xF8, 0xEB),
             bg_surface: C::from_rgb(0xEF, 0xF1, 0xF4),
             bg_elevated: C::from_rgb(0xFF, 0xFF, 0xFF),
-            bg_card: C::from_rgb(0xFF, 0xFF, 0xFF),
-            bg_input: C::from_rgb(0xF4, 0xF5, 0xF8),
+            bg_card: C::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 0xF0),
+            bg_input: C::from_rgba_unmultiplied(0xF4, 0xF5, 0xF8, 0xF0),
             bg_hover: C::from_rgb(0xE6, 0xE8, 0xED),
 
             border_subtle: C::from_rgb(0xE2, 0xE4, 0xEA),
@@ -206,10 +218,10 @@ impl Tokens {
             btn_secondary_text: C::from_rgb(0x17, 0x19, 0x1D),
             btn_ghost_text: C::from_rgb(0x5A, 0x61, 0x72),
 
-            history_bg: C::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 0xCC),
+            history_bg: C::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 0xEB),
             modal_backdrop: C::from_rgba_unmultiplied(0x0D, 0x0F, 0x12, 0x66),
             modal_surface: C::from_rgb(0xFF, 0xFF, 0xFF),
-            panel_glass: C::from_rgba_unmultiplied(0xEF, 0xF1, 0xF4, 0xEB),
+            panel_glass: C::from_rgba_unmultiplied(0xEF, 0xF1, 0xF4, 0xF5),
             overlay_surface: C::from_rgba_unmultiplied(0xFF, 0xFF, 0xFF, 0xF0),
 
             shadow_sm: Shadow {
@@ -245,20 +257,20 @@ impl Tokens {
         if self.bg_base == C::from_rgb(0x0D, 0x0F, 0x12) {
             // Dark mode tint — noticeable purple wash
             self.bg_base = C::from_rgb(0x13, 0x0E, 0x1C);
-            self.bg_window_tinted = C::from_rgba_unmultiplied(0x1B, 0x14, 0x28, 0xC8);
+            self.bg_window_tinted = C::from_rgba_unmultiplied(0x1B, 0x14, 0x28, 0xEB);
             self.bg_surface = C::from_rgb(0x1B, 0x14, 0x28);
             self.bg_elevated = C::from_rgb(0x22, 0x1A, 0x30);
-            self.bg_card = C::from_rgb(0x26, 0x1E, 0x35);
-            self.bg_input = C::from_rgb(0x18, 0x12, 0x24);
+            self.bg_card = C::from_rgba_unmultiplied(0x26, 0x1E, 0x35, 0xF0);
+            self.bg_input = C::from_rgba_unmultiplied(0x18, 0x12, 0x24, 0xF0);
             self.border_subtle = C::from_rgb(0x38, 0x2A, 0x4A);
         } else {
             // Light mode tint — noticeable purple wash
             self.bg_base = C::from_rgb(0xF0, 0xEB, 0xF8);
-            self.bg_window_tinted = C::from_rgba_unmultiplied(0xE8, 0xE1, 0xF2, 0xD2);
+            self.bg_window_tinted = C::from_rgba_unmultiplied(0xE8, 0xE1, 0xF2, 0xEB);
             self.bg_surface = C::from_rgb(0xE8, 0xE1, 0xF2);
             self.bg_elevated = C::from_rgb(0xF8, 0xF4, 0xFF);
-            self.bg_card = C::from_rgb(0xF8, 0xF4, 0xFF);
-            self.bg_input = C::from_rgb(0xED, 0xE7, 0xF6);
+            self.bg_card = C::from_rgba_unmultiplied(0xF8, 0xF4, 0xFF, 0xF0);
+            self.bg_input = C::from_rgba_unmultiplied(0xED, 0xE7, 0xF6, 0xF0);
             self.border_subtle = C::from_rgb(0xD2, 0xC8, 0xE4);
         }
         self.border_focus = self.accent_purple;
