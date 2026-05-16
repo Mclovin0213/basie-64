@@ -24,7 +24,10 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
     // head of the window.
     let radius = crate::app::WINDOW_RADIUS as u8;
     let frame = egui::Frame::new()
-        .fill(tokens.window_fill(app.settings.translucent_window))
+        .fill(tokens.window_fill_for(
+            app.settings.translucent_window,
+            app.settings.experimental_native_vibrancy,
+        ))
         .corner_radius(egui::CornerRadius {
             nw: radius,
             ne: radius,
@@ -96,7 +99,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                         &settings_btn,
                         egui::popup::PopupCloseBehavior::CloseOnClickOutside,
                         |ui| {
-                            ui.set_min_width(200.0);
+                            ui.set_min_width(220.0);
                             let mut translucent = app.settings.translucent_window;
                             if ui
                                 .checkbox(&mut translucent, "Translucent window")
@@ -106,6 +109,23 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
                                 app.settings.translucent_window = translucent;
                                 app.settings.save();
                                 ctx.request_repaint();
+                            }
+
+                            #[cfg(target_os = "macos")]
+                            {
+                                let mut native = app.settings.experimental_native_vibrancy;
+                                if ui
+                                    .checkbox(&mut native, "Native macOS blur (experimental)")
+                                    .on_hover_text(
+                                        "Installs a real NSVisualEffectView behind the window. \
+                                         Requires app restart. If the UI goes blank, turn this \
+                                         off in ~/Library/Application Support/com.basie64.basie-64/config.toml.",
+                                    )
+                                    .changed()
+                                {
+                                    app.settings.experimental_native_vibrancy = native;
+                                    app.settings.save();
+                                }
                             }
                         },
                     );

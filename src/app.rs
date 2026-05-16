@@ -96,6 +96,12 @@ pub struct Basie64App {
     pub(crate) batch_pending_confirmation: Option<BatchPending>,
     pub(crate) batch_progress: BatchProgress,
     pub(crate) batch_receiver: Option<Receiver<BatchWorkerMessage>>,
+
+    /// True once a deferred macOS NSVisualEffectView installation has been
+    /// attempted on the first `update()` frame, so we don't keep retrying
+    /// every frame. macOS-only, but kept on all platforms to avoid a cfg in
+    /// the struct definition.
+    pub(crate) vibrancy_installed: bool,
 }
 
 /// State for a batch operation awaiting user confirmation.
@@ -176,6 +182,7 @@ impl Default for Basie64App {
             batch_pending_confirmation: None,
             batch_progress: BatchProgress::default(),
             batch_receiver: None,
+            vibrancy_installed: false,
         }
     }
 }
@@ -832,7 +839,11 @@ pub(crate) const WINDOW_RADIUS: f32 = 11.0;
 
 impl eframe::App for Basie64App {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        if self.settings.translucent_window {
+        // Native vibrancy means an NSVisualEffectView is painting the window
+        // surface underneath; the Metal layer must clear to fully transparent
+        // so that effect view shows through. Same goes for the translucent
+        // painted-tint mode (already transparent before this change).
+        if self.settings.translucent_window || self.settings.experimental_native_vibrancy {
             egui::Rgba::TRANSPARENT.to_array()
         } else {
             let tokens = if self.settings.private_mode {
@@ -847,6 +858,19 @@ impl eframe::App for Basie64App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         self.now = ctx.input(|i| i.time);
         self.poll_batch_updates();
+
+        // Deferred macOS NSVisualEffectView installation. Attempted exactly
+        // once, on the first frame after the wgpu Metal layer is realized —
+        // see `src/macos_vibrancy.rs` for why this can't run in the creator.
+        #[cfg(target_os = "macos")]
+        if self.settings.experimental_native_vibrancy && !self.vibrancy_installed {
+            self.vibrancy_installed = true;
+            if let Err(reason) =
+                crate::macos_vibrancy::try_install_native(_frame, WINDOW_RADIUS as f64)
+            {
+                eprintln!("[basie-64] native vibrancy install failed: {reason}");
+            }
+        }
 
         // Apply theme if it changed (or first frame), or if private mode toggled.
         if self.applied_theme != Some(self.settings.theme)
@@ -952,7 +976,10 @@ impl eframe::App for Basie64App {
             theme::Tokens::for_theme(self.settings.theme)
         };
         let central_frame = egui::Frame::new()
-            .fill(tokens.window_fill(self.settings.translucent_window))
+            .fill(tokens.window_fill_for(
+                self.settings.translucent_window,
+                self.settings.experimental_native_vibrancy,
+            ))
             .inner_margin(egui::Margin {
                 left: 12,
                 right: 12,
@@ -1035,7 +1062,10 @@ fn show_status_footer(app: &Basie64App, ctx: &egui::Context) {
     // foot of the window.
     let radius = WINDOW_RADIUS as u8;
     let frame = egui::Frame::new()
-        .fill(tokens.window_fill(app.settings.translucent_window))
+        .fill(tokens.window_fill_for(
+            app.settings.translucent_window,
+            app.settings.experimental_native_vibrancy,
+        ))
         .corner_radius(egui::CornerRadius {
             nw: 0,
             ne: 0,

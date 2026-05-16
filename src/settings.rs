@@ -18,6 +18,14 @@ pub struct Settings {
     /// staple of the app's look.
     #[serde(default = "default_translucent_window")]
     pub translucent_window: bool,
+    /// Experimental: when true, attempt to install a native macOS
+    /// `NSVisualEffectView` blur behind the (transparent) panel fills, so the
+    /// desktop is actually frosted by the OS instead of just tinted by a
+    /// painted color. Disabled by default because eframe-wgpu + window-vibrancy
+    /// can leave the UI blank on some setups (see
+    /// `~/.claude/plans/can-we-attempt-the-vivid-bird.md`). Requires restart.
+    #[serde(default)]
+    pub experimental_native_vibrancy: bool,
 }
 
 fn default_translucent_window() -> bool {
@@ -31,6 +39,7 @@ impl Default for Settings {
             recent_files: Vec::new(),
             private_mode: false,
             translucent_window: true,
+            experimental_native_vibrancy: false,
         }
     }
 }

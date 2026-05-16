@@ -1,6 +1,8 @@
 mod app;
 mod decode;
 mod detect;
+#[cfg(target_os = "macos")]
+mod macos_vibrancy;
 mod samples;
 mod settings;
 mod theme;
@@ -59,13 +61,11 @@ fn main() -> eframe::Result {
             theme::apply(&cc.egui_ctx, app.settings.theme, app.settings.private_mode);
 
             // Native macOS vibrancy (`window_vibrancy::apply_vibrancy`) is
-            // intentionally not used here. With eframe 0.31 the
-            // `NSVisualEffectView` gets inserted as a sibling that occludes
-            // egui's Metal content view, leaving the UI blank. We rely on
-            // painted `bg_window_tinted` panel fills over a transparent
-            // window for the "see through" look instead. See
-            // ~/.claude/plans/do-some-research-on-vast-key.md for the full
-            // investigation before re-introducing this.
+            // deferred until the first `update()` frame — see
+            // `src/macos_vibrancy.rs`. Calling it here blanks the UI because
+            // the NSVisualEffectView lands above the wgpu Metal layer before
+            // it's realized. Controlled by the experimental
+            // `experimental_native_vibrancy` setting (default off).
             #[cfg(target_os = "windows")]
             {
                 use window_vibrancy::apply_mica;

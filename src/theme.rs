@@ -110,6 +110,17 @@ impl Tokens {
         }
     }
 
+    /// Like `window_fill`, but when `native_vibrancy` is true returns a fully
+    /// transparent fill so an underlying macOS `NSVisualEffectView` can show
+    /// its real OS-level blur instead of a painted tint.
+    pub fn window_fill_for(&self, translucent: bool, native_vibrancy: bool) -> egui::Color32 {
+        if native_vibrancy {
+            egui::Color32::TRANSPARENT
+        } else {
+            self.window_fill(translucent)
+        }
+    }
+
     pub fn dark() -> Self {
         use egui::Color32 as C;
         Self {

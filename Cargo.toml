@@ -43,6 +43,16 @@ kamadak-exif = "0.5"
 [target.'cfg(any(target_os = "macos", target_os = "windows"))'.dependencies]
 window-vibrancy = "0.7"
 
+[target.'cfg(target_os = "macos")'.dependencies]
+# For manual NSVisualEffectView insertion below the wgpu Metal view — see
+# `src/macos_vibrancy.rs`. Versions matched to window-vibrancy 0.7's
+# transitive deps to avoid pulling in a second objc2 graph.
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSView", "NSVisualEffectView", "NSGraphics", "NSResponder"] }
+objc2-foundation = { version = "0.3", features = ["NSGeometry"] }
+objc2-quartz-core = { version = "0.3", features = ["CALayer"] }
+raw-window-handle = "0.6"
+
 [package.metadata.bundle]
 name = "Basie-64"
 identifier = "com.basie64.app"
