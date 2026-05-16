@@ -24,10 +24,7 @@ pub fn show(app: &mut Basie64App, ctx: &egui::Context) {
     // head of the window.
     let radius = crate::app::WINDOW_RADIUS as u8;
     let frame = egui::Frame::new()
-        .fill(tokens.window_fill_for(
-            app.settings.translucent_window,
-            app.settings.experimental_native_vibrancy,
-        ))
+        .fill(tokens.window_fill_for(app.settings.translucent_window, app.vibrancy_active))
         .corner_radius(egui::CornerRadius {
             nw: radius,
             ne: radius,

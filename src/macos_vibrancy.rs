@@ -33,9 +33,7 @@ pub fn try_install_native(frame: &eframe::Frame, radius: f64) -> Result<(), &'st
     // `MainThreadMarker` is needed because most `NSView` APIs require it.
     let mtm = unsafe { MainThreadMarker::new_unchecked() };
 
-    let handle = frame
-        .window_handle()
-        .map_err(|_| "no window handle yet")?;
+    let handle = frame.window_handle().map_err(|_| "no window handle yet")?;
     let RawWindowHandle::AppKit(appkit) = handle.as_raw() else {
         return Err("not an AppKit window");
     };
